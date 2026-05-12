@@ -1,37 +1,95 @@
 import { Candidate } from "./types";
 
-const STORAGE_KEY = "vector_eval_candidates";
+type CandidatesResponse = {
+  candidates?: Candidate[];
+  candidate?: Candidate;
+  error?: string;
+};
 
-export function getCandidates(): Candidate[] {
-  if (typeof window === "undefined") return [];
+async function readJson(response: Response): Promise<CandidatesResponse> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Candidate[]) : [];
+    return (await response.json()) as CandidatesResponse;
   } catch {
-    return [];
+    return {};
   }
 }
 
-export function saveCandidate(candidate: Candidate): void {
-  const all = getCandidates();
-  const idx = all.findIndex((c) => c.id === candidate.id);
-  if (idx >= 0) {
-    all[idx] = candidate;
-  } else {
-    all.unshift(candidate);
+function apiError(data: CandidatesResponse, fallback: string): Error {
+  return new Error(data.error || fallback);
+}
+
+export async function getCandidates(): Promise<Candidate[]> {
+  const response = await fetch("/api/candidates", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  const data = await readJson(response);
+
+  if (!response.ok) throw apiError(data, "Failed to load candidates");
+  return data.candidates ?? [];
+}
+
+export async function getCandidate(id: string): Promise<Candidate | null> {
+  const response = await fetch(`/api/candidates/${encodeURIComponent(id)}`, {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  const data = await readJson(response);
+
+  if (response.status === 404) return null;
+  if (!response.ok) throw apiError(data, "Failed to load candidate");
+  return data.candidate ?? null;
+}
+
+export const getCandidateById = getCandidate;
+
+export async function saveCandidate(candidate: Candidate): Promise<Candidate> {
+  if (candidate.id) {
+    const patchResponse = await fetch(`/api/candidates/${encodeURIComponent(candidate.id)}`, {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(candidate),
+    });
+    const patchData = await readJson(patchResponse);
+
+    if (patchResponse.ok) {
+      if (!patchData.candidate) throw new Error("Candidate API returned no candidate");
+      return patchData.candidate;
+    }
+
+    if (patchResponse.status !== 404) {
+      throw apiError(patchData, "Failed to save candidate");
+    }
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+
+  const response = await fetch("/api/candidates", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(candidate),
+  });
+  const data = await readJson(response);
+
+  if (!response.ok) throw apiError(data, "Failed to save candidate");
+  if (!data.candidate) throw new Error("Candidate API returned no candidate");
+
+  return data.candidate;
 }
 
-export function deleteCandidate(id: string): void {
-  const all = getCandidates().filter((c) => c.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-}
-
-export function getCandidateById(id: string): Candidate | undefined {
-  return getCandidates().find((c) => c.id === id);
+export async function deleteCandidate(id: string): Promise<never> {
+  throw new Error(`Deleting candidate ${id} is not supported by the shared backend yet.`);
 }
 
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `cand_${crypto.randomUUID()}`;
+  }
+  return `cand_${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

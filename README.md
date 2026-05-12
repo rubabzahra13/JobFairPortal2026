@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VECTOR Job Fair Portal
 
-## Getting Started
+Next.js portal for FAST Islamabad job fair candidate intake and hiring panel evaluation.
 
-First, run the development server:
+## Local Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the local URL printed by Next. Candidate intake is at `/apply`; the panel is at `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` and fill:
 
-## Learn More
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`: `client_email` from the Google service account JSON key.
+- `GOOGLE_PRIVATE_KEY`: `private_key` from the same JSON key. Keep newline escapes as `\n`.
+- `GOOGLE_SHEET_ID`: ID from the Google Sheet URL.
+- `GOOGLE_DRIVE_FOLDER_ID`: ID from the Drive folder URL.
+- `BACKEND_ORIGIN`: set on Vercel to the EC2 backend origin, for example `http://32.196.238.144`.
+- `BACKEND_PUBLIC_URL`: set on EC2 to the public backend origin for local resume fallback links.
+- `PANEL_CREDENTIALS`: comma-separated `username:password:Display Name` entries.
+- `PANEL_SESSION_SECRET`: generate with `openssl rand -base64 32`.
+- `GEMINI_API_KEY`: key from Google AI Studio.
+- `GEMINI_MODEL`: defaults to `gemini-2.5-flash`.
+- `NEXT_PUBLIC_APP_URL`: local or deployed base URL.
 
-To learn more about Next.js, take a look at the following resources:
+## Google Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create or select a Google Cloud project.
+2. Enable Google Sheets API and Google Drive API.
+3. Create a service account and JSON key.
+4. Create the Sheet and share it with the service account email as Editor.
+5. Use the Sheet ID in `GOOGLE_SHEET_ID`.
+6. For Google Drive resume upload, use a Google Shared Drive folder and share it with the service account as Content manager or Editor. Normal My Drive folders can reject service account uploads because service accounts have no storage quota.
+7. Use the folder ID in `GOOGLE_DRIVE_FOLDER_ID`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The app creates the `Candidates` Sheet tab and headers automatically.
+If Drive upload fails, the EC2 backend saves the resume under `/uploads/resumes/` and writes that public backend URL to the Sheet.
 
-## Deploy on Vercel
+## Verification
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+
+Deploy this repo to Vercel and add the same environment variables in Project Settings. The Next route handlers under `/app/api/*` are the backend.

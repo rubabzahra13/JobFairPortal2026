@@ -49,7 +49,8 @@ export default function SubmissionsPage() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const timeoutId = window.setTimeout(refresh, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [refresh]);
 
   const handleDelete = (id: string) => {

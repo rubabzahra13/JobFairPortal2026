@@ -192,8 +192,8 @@ export default function GuidePage() {
         </div>
         <h1 className="text-2xl font-bold">Field Guide</h1>
         <p className="text-sm text-muted-foreground max-w-xl">
-          We're not collecting resumes — we're identifying the next lions joining the pride.
-          Keep this open while you're at the booth.
+          We&apos;re not collecting resumes — we&apos;re identifying the next lions joining the pride.
+          Keep this open while you&apos;re at the booth.
         </p>
       </div>
 

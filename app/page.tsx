@@ -6,10 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Rocket, Users, TrendingUp, Target } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { calcTotalScore, ARCHETYPE_META } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { candidates, loading, remove } = useCandidates();
+  const { candidates, loading, error, refresh } = useCandidates();
 
   const total = candidates.length;
   const astronauts = candidates.filter((c) => c.archetype === "astronaut").length;
@@ -44,6 +43,15 @@ export default function DashboardPage() {
         <p className="text-xs font-medium text-primary uppercase tracking-wider">Job Fair 2026</p>
         <h1 className="text-2xl font-bold tracking-tight mt-1">Evaluations</h1>
       </div>
+
+      {error ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <span>{error}</span>
+          <button type="button" className="font-medium underline" onClick={() => void refresh()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {/* Metrics Bar */}
       {loading ? (
@@ -117,7 +125,7 @@ export default function DashboardPage() {
           </ButtonLink>
         </div>
       ) : (
-        <CandidatesTable candidates={candidates} onDelete={remove} />
+        <CandidatesTable candidates={candidates} />
       )}
     </div>
   );
