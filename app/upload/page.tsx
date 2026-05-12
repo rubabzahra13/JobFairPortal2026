@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { saveCvPdf } from "@/lib/cv-storage";
 import { saveSubmission, generateSubmissionId } from "@/lib/submissions";
 import { Upload, FileText, CheckCircle2, Loader2, AlertCircle, Zap } from "lucide-react";
 
@@ -74,9 +75,18 @@ export default function UploadPage() {
         throw new Error(result.error || "Failed to parse CV");
       }
 
+      const id = generateSubmissionId();
+      let cvStored = false;
+      try {
+        await saveCvPdf(id, file);
+        cvStored = true;
+      } catch (storeErr) {
+        console.error("CV file storage failed:", storeErr);
+      }
+
       // Save submission
       const submission = {
-        id: generateSubmissionId(),
+        id,
         name: result.data.name || "",
         email: result.data.email || "",
         phone: result.data.phone || "",
@@ -88,6 +98,7 @@ export default function UploadPage() {
         hometown: result.data.hometown || "",
         cvText: result.cvText || "",
         cvFileName: file.name,
+        cvStored,
         status: "pending" as const,
         submittedAt: new Date().toISOString(),
       };

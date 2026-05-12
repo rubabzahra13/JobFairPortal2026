@@ -1,3 +1,5 @@
+import { deleteStoredCvPdf } from "./cv-storage";
+
 export interface Submission {
   id: string;
   // Extracted from CV
@@ -13,6 +15,8 @@ export interface Submission {
   // CV data
   cvText: string;
   cvFileName: string;
+  // CV file (binary stored in IndexedDB; see lib/cv-storage.ts)
+  cvStored?: boolean;
   // Status
   status: "pending" | "reviewed" | "evaluated";
   candidateId?: string; // Links to evaluated candidate
@@ -60,7 +64,14 @@ export function updateSubmissionStatus(
   }
 }
 
+export function getSubmissionByCandidateId(
+  candidateId: string
+): Submission | undefined {
+  return getSubmissions().find((s) => s.candidateId === candidateId);
+}
+
 export function deleteSubmission(id: string): void {
+  void deleteStoredCvPdf(id).catch(() => {});
   const all = getSubmissions().filter((s) => s.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
 }

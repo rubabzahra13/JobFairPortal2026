@@ -12,7 +12,6 @@ export interface Candidate {
   name: string;
   // Metadata
   hometown: string;
-  postGradLocation: string;
   degree: string;
   batch: string;
   yearsOfExperience: string;
@@ -24,6 +23,8 @@ export interface Candidate {
   evaluators: string;
   // Notes
   notes: string;
+  // Link back to CV submission (IndexedDB PDF key)
+  sourceSubmissionId?: string;
   // Timestamp
   createdAt: string;
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Candidate, Archetype, SCORE_DIMENSIONS, calcTotalScore } from "@/lib/types";
 import { saveCandidate, generateId } from "@/lib/store";
 import { getSubmissionById, updateSubmissionStatus, Submission } from "@/lib/submissions";
+import { ViewCvButton } from "@/components/submissions/view-cv-button";
 import { ScoreSlider } from "./score-slider";
 import { ArchetypePicker } from "./archetype-picker";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [name, setName] = useState(initial?.name ?? "");
   const [hometown, setHometown] = useState(initial?.hometown ?? "");
-  const [postGradLocation, setPostGradLocation] = useState(initial?.postGradLocation ?? "");
   const [degree, setDegree] = useState(initial?.degree ?? "");
   const [batch, setBatch] = useState(initial?.batch ?? "");
   const [yearsOfExperience, setYearsOfExperience] = useState(initial?.yearsOfExperience ?? "");
@@ -55,6 +55,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         setBatch(sub.batch || "");
         setYearsOfExperience(sub.experience || "");
         setHometown(sub.hometown || "");
+        setEvaluators("Pre-filled");
         // Add skills to notes
         if (sub.skills) {
           setNotes(`Skills: ${sub.skills}`);
@@ -62,6 +63,13 @@ export function CandidateForm({ initial }: CandidateFormProps) {
       }
     }
   }, [submissionId, isEdit]);
+
+  useEffect(() => {
+    if (isEdit && initial?.sourceSubmissionId) {
+      const sub = getSubmissionById(initial.sourceSubmissionId);
+      if (sub) setSubmission(sub);
+    }
+  }, [isEdit, initial?.sourceSubmissionId]);
 
   const totalScore = calcTotalScore(scores);
 
@@ -72,18 +80,22 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const candidateId = initial?.id ?? generateId();
+    const evaluatorsTrimmed = evaluators.trim();
+    const evaluatorsFinal =
+      evaluatorsTrimmed === "Pre-filled" ? "" : evaluatorsTrimmed;
+
     const candidate: Candidate = {
       id: candidateId,
       name: name.trim() || "Anonymous",
       hometown,
-      postGradLocation,
       degree,
       batch,
       yearsOfExperience,
-      evaluators,
+      evaluators: evaluatorsFinal,
       notes,
       archetype,
       scores,
+      sourceSubmissionId: submissionId ?? initial?.sourceSubmissionId,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
     saveCandidate(candidate);
@@ -136,14 +148,16 @@ export function CandidateForm({ initial }: CandidateFormProps) {
 
       {/* CV Info Banner */}
       {submission && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center">
           <FileText className="h-5 w-5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">CV Pre-filled</p>
             <p className="text-xs text-muted-foreground truncate">
               {submission.email || submission.phone || "Review and adjust the extracted info below"}
             </p>
+            <p className="text-[11px] text-muted-foreground mt-1 truncate">{submission.cvFileName}</p>
           </div>
+          <ViewCvButton submissionId={submission.id} variant="outline" className="shrink-0" />
         </div>
       )}
 
@@ -205,26 +219,14 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="hometown" className="text-xs">
-              Hometown
+            <Label htmlFor="location" className="text-xs">
+              Location
             </Label>
             <Input
-              id="hometown"
+              id="location"
               placeholder="e.g. Lahore"
               value={hometown}
               onChange={(e) => setHometown(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="postGrad" className="text-xs">
-              Post-Grad Location
-            </Label>
-            <Input
-              id="postGrad"
-              placeholder="e.g. Karachi (relocating)"
-              value={postGradLocation}
-              onChange={(e) => setPostGradLocation(e.target.value)}
               className="h-9 bg-card text-sm"
             />
           </div>

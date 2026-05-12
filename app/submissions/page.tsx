@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { Submission, getSubmissions, deleteSubmission } from "@/lib/submissions";
+import { ViewCvButton } from "@/components/submissions/view-cv-button";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import {
@@ -94,89 +94,131 @@ export default function SubmissionsPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow className="border-border bg-card/50 hover:bg-card/50">
-                <TableHead className="text-xs">Candidate</TableHead>
-                <TableHead className="text-xs">Education</TableHead>
-                <TableHead className="text-xs">Experience</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Submitted</TableHead>
-                <TableHead className="text-xs text-right w-[120px]">Actions</TableHead>
+              <TableRow className="border-border bg-muted/30 hover:bg-muted/30">
+                <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Candidate
+                </TableHead>
+                <TableHead className="h-11 min-w-[148px] px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  CV
+                </TableHead>
+                <TableHead className="h-11 min-w-[160px] px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Education
+                </TableHead>
+                <TableHead className="h-11 min-w-[140px] max-w-[260px] px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Experience
+                </TableHead>
+                <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Submitted
+                </TableHead>
+                <TableHead className="h-11 w-[200px] px-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {submissions.map((submission) => (
-                <TableRow key={submission.id} className="border-border group">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary">
+              {submissions.map((submission, index) => (
+                <TableRow
+                  key={submission.id}
+                  className={cn(
+                    "border-border group transition-colors",
+                    index % 2 === 1 && "bg-muted/15"
+                  )}
+                >
+                  <TableCell className="align-top whitespace-normal py-3.5 px-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary ring-1 ring-border">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold">
+                      <div className="min-w-0 space-y-0.5 pt-0.5">
+                        <p className="text-sm font-semibold leading-snug text-foreground">
                           {submission.name || "Unknown"}
                         </p>
-                        {submission.email && (
-                          <p className="text-[11px] text-muted-foreground">
+                        {submission.email ? (
+                          <p className="break-all text-[11px] leading-relaxed text-muted-foreground">
                             {submission.email}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-xs">{submission.degree || "—"}</p>
+                  <TableCell className="align-top whitespace-normal py-3.5 px-3">
+                    <div className="flex max-w-[200px] flex-col gap-2">
+                      <div className="min-w-0 space-y-1">
+                        <p
+                          className="text-xs font-medium leading-snug text-foreground"
+                          title={submission.cvFileName}
+                        >
+                          {submission.cvFileName || "—"}
+                        </p>
+                        {submission.cvStored === false ? (
+                          <p className="text-[10px] leading-snug text-amber-500">PDF not stored</p>
+                        ) : null}
+                      </div>
+                      <ViewCvButton
+                        submissionId={submission.id}
+                        label="View PDF"
+                        className="w-fit shrink-0"
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top whitespace-normal py-3.5 px-3">
+                    <div className="max-w-[240px] space-y-1">
+                      <p className="text-xs font-medium leading-snug text-foreground">
+                        {submission.degree || "—"}
+                      </p>
                       {(submission.university || submission.batch) && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {submission.university}
-                          {submission.batch ? ` · ${submission.batch}` : ""}
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          {[submission.university, submission.batch].filter(Boolean).join(" · ")}
                         </p>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <p className="text-xs text-muted-foreground max-w-[200px] truncate">
+                  <TableCell className="align-top whitespace-normal py-3.5 px-3">
+                    <p className="max-w-[260px] text-xs leading-relaxed text-muted-foreground">
                       {submission.experience || "—"}
                     </p>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top whitespace-nowrap py-3.5 px-3">
                     <Badge
                       variant="outline"
                       className={cn(
-                        "text-[10px] font-medium",
+                        "inline-flex h-7 items-center gap-1 px-2 text-[10px] font-medium",
                         submission.status === "pending" &&
-                          "border-amber-500/30 bg-amber-500/10 text-amber-400",
+                          "border-amber-500/35 bg-amber-500/10 text-amber-400",
                         submission.status === "evaluated" &&
-                          "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                          "border-emerald-500/35 bg-emerald-500/10 text-emerald-400"
                       )}
                     >
                       {submission.status === "pending" && (
-                        <Clock className="h-3 w-3 mr-1" />
+                        <Clock className="h-3 w-3 shrink-0" />
                       )}
                       {submission.status === "evaluated" && (
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <CheckCircle2 className="h-3 w-3 shrink-0" />
                       )}
                       {submission.status === "pending" ? "Pending" : "Evaluated"}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground">
+                  <TableCell className="align-top whitespace-nowrap py-3.5 px-3">
+                    <span className="text-xs tabular-nums text-muted-foreground">
                       {formatDistanceToNow(submission.submittedAt)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                  <TableCell className="align-top py-3.5 px-3 text-right">
+                    <div className="flex flex-nowrap items-center justify-end gap-1.5">
                       {submission.status === "pending" && (
                         <ButtonLink
                           href={`/candidates/new?submission=${submission.id}`}
                           variant="default"
                           size="sm"
-                          className="h-7 gap-1.5 text-xs"
+                          className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
                         >
-                          <Play className="h-3 w-3" />
+                          <Play className="h-3.5 w-3.5 shrink-0" />
                           Evaluate
                         </ButtonLink>
                       )}
@@ -185,18 +227,20 @@ export default function SubmissionsPage() {
                           href={`/candidates/${submission.candidateId}`}
                           variant="outline"
                           size="sm"
-                          className="h-7 gap-1.5 text-xs"
+                          className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
                         >
-                          View
+                          Evaluation
                         </ButtonLink>
                       )}
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        title="Remove submission"
                         onClick={() => setDeleteId(submission.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

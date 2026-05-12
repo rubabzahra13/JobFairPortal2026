@@ -4,6 +4,8 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Candidate, ARCHETYPE_META, SCORE_DIMENSIONS, calcTotalScore } from "@/lib/types";
 import { getCandidateById, deleteCandidate } from "@/lib/store";
+import { getSubmissionById, getSubmissionByCandidateId } from "@/lib/submissions";
+import { ViewCvButton } from "@/components/submissions/view-cv-button";
 import { ArchetypeBadge, PriorityBadge } from "@/components/candidates/archetype-badge";
 import { ScoreRing, ScoreBar } from "@/components/candidates/score-ring";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,12 @@ export default function CandidateDetailPage({ params }: PageProps) {
   const meta = ARCHETYPE_META[candidate.archetype];
   const total = calcTotalScore(candidate.scores);
 
+  const submissionForCv =
+    (candidate.sourceSubmissionId
+      ? getSubmissionById(candidate.sourceSubmissionId)
+      : undefined) ?? getSubmissionByCandidateId(candidate.id);
+  const cvSubmissionId = submissionForCv?.id;
+
   function handleDelete() {
     if (!candidate) return;
     deleteCandidate(candidate.id);
@@ -62,6 +70,9 @@ export default function CandidateDetailPage({ params }: PageProps) {
           All Candidates
         </ButtonLink>
         <div className="flex items-center gap-2">
+          {cvSubmissionId && (
+            <ViewCvButton submissionId={cvSubmissionId} label="Submitted CV" variant="outline" className="h-8" />
+          )}
           <ButtonLink href={`/candidates/${candidate.id}/edit`} variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
             <Pencil className="h-3.5 w-3.5" />
             Edit
@@ -106,10 +117,7 @@ export default function CandidateDetailPage({ params }: PageProps) {
           {candidate.hometown && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                {candidate.hometown}
-                {candidate.postGradLocation ? ` → ${candidate.postGradLocation}` : ""}
-              </span>
+              <span>{candidate.hometown}</span>
             </div>
           )}
           {candidate.yearsOfExperience && (

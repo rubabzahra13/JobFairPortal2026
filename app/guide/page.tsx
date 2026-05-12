@@ -208,7 +208,7 @@ export default function GuidePage() {
             "Two evaluators per candidate minimum. Score independently, align on archetype after they leave.",
             "3–5 minutes per person max. Astronaut? Give more. Taxi Rider? Wrap up warmly but quickly.",
             "Don't score during the conversation. Listen, engage, be present. Fill in the moment they walk away.",
-            "Capture metadata immediately — hometown, location, degree/batch. You won't remember tomorrow.",
+            "Capture metadata immediately — location, degree/batch. You won't remember tomorrow.",
             "Be welcoming. We came from FAST. These could be the next us. Everyone deserves respect.",
           ].map((rule, i) => (
             <div
