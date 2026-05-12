@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Candidate, Archetype, calcTotalScore } from "@/lib/types";
 import { ArchetypeBadge } from "@/components/candidates/archetype-badge";
 import { ScoreRing } from "@/components/candidates/score-ring";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -15,18 +16,23 @@ import {
 import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import {
+  AlertCircle,
   FileText,
   Eye,
+  Loader2,
   Pencil,
   Search,
   User,
+  UserX,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/date-utils";
+import { updateCandidateStatus } from "@/lib/store";
 
 type SortKey = "name" | "score" | "archetype" | "createdAt";
 type SortDir = "asc" | "desc";
+type CandidateStatus = NonNullable<Candidate["status"]>;
 
 const ARCHETYPE_FILTERS: Array<{ value: Archetype | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -36,15 +42,36 @@ const ARCHETYPE_FILTERS: Array<{ value: Archetype | "all"; label: string }> = [
   { value: "taxi_rider", label: "Taxi Rider" },
 ];
 
+const STATUS_FILTERS: Array<{ value: CandidateStatus | "all"; label: string }> = [
+  { value: "all", label: "All statuses" },
+  { value: "screening", label: "Screening" },
+  { value: "shortlisted", label: "Shortlisted" },
+  { value: "rejected", label: "Rejected" },
+  { value: "hired", label: "Hired" },
+  { value: "no_show", label: "No show" },
+];
+
+const STATUS_LABELS: Record<CandidateStatus, string> = {
+  screening: "Screening",
+  shortlisted: "Shortlisted",
+  rejected: "Rejected",
+  hired: "Hired",
+  no_show: "No show",
+};
+
 interface CandidatesTableProps {
   candidates: Candidate[];
+  onCandidateChanged?: () => void | Promise<void>;
 }
 
-export function CandidatesTable({ candidates }: CandidatesTableProps) {
+export function CandidatesTable({ candidates, onCandidateChanged }: CandidatesTableProps) {
   const [search, setSearch] = useState("");
   const [archetypeFilter, setArchetypeFilter] = useState<Archetype | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<CandidateStatus | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -55,9 +82,24 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
     }
   }
 
+  async function markNoShow(candidate: Candidate) {
+    setStatusError(null);
+    setUpdatingStatusId(candidate.id);
+
+    try {
+      await updateCandidateStatus(candidate.id, "no_show");
+      await onCandidateChanged?.();
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : "Failed to mark candidate as no show");
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  }
+
   const filtered = candidates
     .filter((c) => {
       if (archetypeFilter !== "all" && c.archetype !== archetypeFilter) return false;
+      if (statusFilter !== "all" && (c.status ?? "screening") !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -86,33 +128,51 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, degree, location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 bg-card pl-8 text-sm"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, degree, hometown..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 bg-card pl-8 text-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            {ARCHETYPE_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setArchetypeFilter(value)}
+                className={cn(
+                  "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  archetypeFilter === value
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          {ARCHETYPE_FILTERS.map(({ value, label }) => (
+          {STATUS_FILTERS.map(({ value, label }) => (
             <button
               key={value}
-              onClick={() => setArchetypeFilter(value)}
+              onClick={() => setStatusFilter(value)}
               className={cn(
                 "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                archetypeFilter === value
-                  ? "bg-secondary text-foreground"
+                statusFilter === value
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
               )}
             >
@@ -122,10 +182,17 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
         </div>
       </div>
 
+      {statusError ? (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{statusError}</span>
+        </div>
+      ) : null}
+
       {/* Result count */}
       <p className="text-xs text-muted-foreground">
         {filtered.length} candidate{filtered.length !== 1 ? "s" : ""}
-        {archetypeFilter !== "all" || search ? " (filtered)" : ""}
+        {archetypeFilter !== "all" || statusFilter !== "all" || search ? " (filtered)" : ""}
       </p>
 
       {/* Table */}
@@ -183,12 +250,15 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
             ) : (
               filtered.map((candidate, index) => {
                 const total = calcTotalScore(candidate.scores);
+                const status = candidate.status ?? "screening";
+                const isNoShow = status === "no_show";
                 return (
                   <TableRow
                     key={candidate.id}
                     className={cn(
                       "border-border group transition-colors",
-                      index % 2 === 1 && "bg-muted/15"
+                      index % 2 === 1 && "bg-muted/15",
+                      isNoShow && "bg-red-950/25 hover:bg-red-950/35"
                     )}
                   >
                     <TableCell className="align-middle whitespace-normal py-3.5 px-3 min-w-0 max-w-[220px] sm:max-w-[260px]">
@@ -203,7 +273,7 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
                           >
                             {candidate.name}
                           </p>
-                        {candidate.hometown ? (
+                          {candidate.hometown ? (
                             <p
                               className="truncate text-[11px] leading-relaxed text-muted-foreground"
                               title={candidate.hometown}
@@ -212,11 +282,16 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
                             </p>
                           ) : null}
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            {candidate.status ? (
-                              <span className="rounded border border-border bg-secondary/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                                {candidate.status}
-                              </span>
-                            ) : null}
+                            <span
+                              className={cn(
+                                "rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                                isNoShow
+                                  ? "border-red-500/40 bg-red-500/15 text-red-100"
+                                  : "border-border bg-secondary/50 text-muted-foreground"
+                              )}
+                            >
+                              {STATUS_LABELS[status]}
+                            </span>
                             {candidate.resumeUrl ? (
                               <a
                                 href={candidate.resumeUrl}
@@ -287,6 +362,24 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
                         >
                           <Pencil className="h-4 w-4" />
                         </ButtonLink>
+                        {!isNoShow ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-red-500/10 hover:text-red-300"
+                            title="Mark no show"
+                            aria-label={`Mark ${candidate.name} as no show`}
+                            disabled={updatingStatusId === candidate.id}
+                            onClick={() => void markNoShow(candidate)}
+                          >
+                            {updatingStatusId === candidate.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <UserX className="h-4 w-4" />
+                            )}
+                          </Button>
+                        ) : null}
                       </div>
                     </TableCell>
                   </TableRow>

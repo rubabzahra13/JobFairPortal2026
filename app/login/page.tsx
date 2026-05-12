@@ -2,10 +2,11 @@
 
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, Loader2, LogIn, Zap } from "lucide-react";
+import { AlertCircle, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VectorLogo } from "@/components/brand/vector-logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -42,8 +43,8 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
       <div className="space-y-3 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-          <Zap className="h-6 w-6 text-primary-foreground" fill="currentColor" />
+        <div className="mx-auto flex h-14 w-44 items-center justify-center rounded-xl bg-primary px-4">
+          <VectorLogo className="h-8 max-w-full" />
         </div>
         <div>
           <h1 className="text-xl font-semibold">Panel Login</h1>

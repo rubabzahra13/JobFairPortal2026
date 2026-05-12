@@ -19,6 +19,7 @@ import {
   evaluatorDisplayNames,
   setEvaluatorScorecard,
 } from "@/lib/evaluator-scorecards";
+import { CANDIDATE_STATUSES } from "@/lib/candidate-record";
 import {
   ACADEMIC_BATCH_OPTIONS,
   DEGREE_GROUPS,
@@ -48,6 +49,16 @@ const DEFAULT_SCORES: Scores = {
   personality: 5,
   communication: 5,
   khandaniPan: 5,
+};
+
+type CandidateStatus = NonNullable<Candidate["status"]>;
+
+const STATUS_LABELS: Record<CandidateStatus, string> = {
+  screening: "Screening",
+  shortlisted: "Shortlisted",
+  rejected: "Rejected",
+  hired: "Hired",
+  no_show: "No show",
 };
 
 function submissionDegree(submission: Submission | null): string {
@@ -89,6 +100,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const [archetype, setArchetype] = useState<Archetype>(
     initial?.archetype ?? submission?.suggestedArchetype ?? "pilot"
   );
+  const [status, setStatus] = useState<CandidateStatus>(initial?.status ?? "screening");
   const [activeEvaluatorId, setActiveEvaluatorId] = useState<PanelEvaluatorId>(() =>
     firstEvaluatorId(initial?.evaluatorScorecards)
   );
@@ -198,7 +210,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
       archetype,
       scores: nextAggregateScores,
       evaluatorScorecards: nextScorecards,
-      status: initial?.status ?? "screening",
+      status,
       source: initial?.source ?? "panel",
       sourceSubmissionId: submissionId ?? initial?.sourceSubmissionId,
       createdAt: initial?.createdAt ?? now,
@@ -368,6 +380,28 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               onChange={(e) => setGraduationLocationPlan(e.target.value)}
               className="min-h-20 resize-none bg-card text-sm"
             />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label className="text-xs">Interview Status</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {CANDIDATE_STATUSES.map((statusOption) => (
+                <button
+                  key={statusOption}
+                  type="button"
+                  onClick={() => setStatus(statusOption)}
+                  className={cn(
+                    "min-h-9 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    status === statusOption
+                      ? statusOption === "no_show"
+                        ? "border-red-500/50 bg-red-500/15 text-red-100"
+                        : "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {STATUS_LABELS[statusOption]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>

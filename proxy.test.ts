@@ -16,6 +16,7 @@ describe("proxy public path classification", () => {
     expect(isPublicPath("/globe.svg")).toBe(true);
     expect(isPublicPath("/next.svg")).toBe(true);
     expect(isPublicPath("/vector-candidate-apply-qr.png")).toBe(true);
+    expect(isPublicPath("/vector-logo-white.png")).toBe(true);
     expect(isPublicPath("/vercel.svg")).toBe(true);
     expect(isPublicPath("/window.svg")).toBe(true);
   });

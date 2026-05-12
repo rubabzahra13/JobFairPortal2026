@@ -46,7 +46,7 @@ export function hasCandidateSheetTab(sheetTitles: readonly string[]): boolean {
   return sheetTitles.includes(SHEET_NAME);
 }
 
-export async function ensureCandidateSheetHeaders(): Promise<void> {
+export async function ensureCandidateSheetHeaders(): Promise<number> {
   const sheets = getGoogleSheetsClient();
   const spreadsheetId = getSpreadsheetId();
 
@@ -60,7 +60,7 @@ export async function ensureCandidateSheetHeaders(): Promise<void> {
   let sheetId = candidateSheet?.properties?.sheetId;
   let shouldFormatSheet = false;
 
-  if (sheetId === undefined) {
+  if (sheetId == null) {
     const addSheetResponse = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -79,13 +79,17 @@ export async function ensureCandidateSheetHeaders(): Promise<void> {
     shouldFormatSheet = true;
   }
 
+  if (sheetId == null) {
+    throw new Error("Failed to resolve Candidates sheet id");
+  }
+
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: sheetRange(`A1:${columnLetter(CANDIDATE_SHEET_HEADERS.length)}1`),
   });
   const currentHeader = response.data.values?.[0] ?? [];
 
-  if (isCandidateSheetHeaderRow(currentHeader)) return;
+  if (isCandidateSheetHeaderRow(currentHeader)) return sheetId;
 
   const legacyRows = isLegacyCandidateSheetHeaderRow(currentHeader)
     ? await readLegacyCandidateRows()
@@ -117,9 +121,11 @@ export async function ensureCandidateSheetHeaders(): Promise<void> {
 
   shouldFormatSheet = true;
 
-  if (sheetId != null && shouldFormatSheet) {
+  if (shouldFormatSheet) {
     await formatCandidateSheet(sheetId);
   }
+
+  return sheetId;
 }
 
 export async function listCandidates(): Promise<Candidate[]> {
@@ -142,7 +148,7 @@ export async function getCandidateById(id: string): Promise<Candidate | null> {
 }
 
 export async function upsertCandidate(candidate: Candidate): Promise<Candidate> {
-  await ensureCandidateSheetHeaders();
+  const sheetId = await ensureCandidateSheetHeaders();
 
   const sheets = getGoogleSheetsClient();
   const spreadsheetId = getSpreadsheetId();
@@ -153,6 +159,7 @@ export async function upsertCandidate(candidate: Candidate): Promise<Candidate> 
   const rows = (rowsResponse.data.values ?? []).map((row) => row.map(String));
   const row = candidateToSheetRow(candidate);
   const existingRowNumber = findCandidateSheetRowNumber(rows, candidate.id);
+  const writtenRowNumber = existingRowNumber ?? rows.length + 2;
 
   if (existingRowNumber) {
     await sheets.spreadsheets.values.update({
@@ -172,6 +179,8 @@ export async function upsertCandidate(candidate: Candidate): Promise<Candidate> 
       requestBody: { values: [row] },
     });
   }
+
+  await formatCandidateSheetRow(sheetId, writtenRowNumber, candidate.status ?? "screening");
 
   return candidate;
 }
@@ -282,6 +291,57 @@ async function formatCandidateSheet(sheetId: number): Promise<void> {
         dimensionWidthRequest(sheetId, 34, 40, 155),
         dimensionWidthRequest(sheetId, 40, columnCount, 145),
       ],
+    },
+  });
+}
+
+export function candidateRowFormatRequest(
+  sheetId: number,
+  rowNumber: number,
+  status: Candidate["status"] = "screening",
+  columnCount = CANDIDATE_SHEET_HEADERS.length
+) {
+  const isNoShow = status === "no_show";
+
+  return {
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: Math.max(rowNumber - 1, 1),
+        endRowIndex: Math.max(rowNumber, 2),
+        startColumnIndex: 0,
+        endColumnIndex: columnCount,
+      },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: isNoShow
+            ? { red: 0.62, green: 0.06, blue: 0.08 }
+            : { red: 1, green: 1, blue: 1 },
+          verticalAlignment: "TOP",
+          wrapStrategy: "WRAP",
+          textFormat: {
+            bold: isNoShow,
+            foregroundColor: isNoShow
+              ? { red: 1, green: 1, blue: 1 }
+              : { red: 0.06, green: 0.06, blue: 0.07 },
+          },
+        },
+      },
+      fields: "userEnteredFormat(backgroundColor,verticalAlignment,wrapStrategy,textFormat)",
+    },
+  };
+}
+
+async function formatCandidateSheetRow(
+  sheetId: number,
+  rowNumber: number,
+  status: Candidate["status"]
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: getSpreadsheetId(),
+    requestBody: {
+      requests: [candidateRowFormatRequest(sheetId, rowNumber, status)],
     },
   });
 }

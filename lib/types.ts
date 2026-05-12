@@ -49,7 +49,7 @@ export interface Candidate {
   evaluators: string;
   // Notes
   notes: string;
-  status?: "screening" | "shortlisted" | "rejected" | "hired";
+  status?: "screening" | "shortlisted" | "rejected" | "hired" | "no_show";
   source?: "qr" | "panel" | "import";
   resumeFileName?: string;
   resumeUrl?: string;
