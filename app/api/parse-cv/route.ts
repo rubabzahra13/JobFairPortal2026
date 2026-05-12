@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -17,16 +19,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to buffer and parse PDF
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
     let cvText = "";
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require("pdf-parse");
-      const pdfData = await pdfParse(buffer);
-      cvText = pdfData.text;
+      // pdf-parse v2+ exports PDFParse class (no default function like v1)
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: buffer });
+      const textResult = await parser.getText();
+      cvText = textResult.text;
+      await parser.destroy();
     } catch (pdfError) {
       console.error("PDF parsing error:", pdfError);
       return NextResponse.json(
@@ -78,8 +81,6 @@ ${cvText.slice(0, 8000)}`;
     });
 
     const content = completion.choices[0]?.message?.content || "{}";
-    
-    // Clean up potential markdown formatting
     const jsonStr = content.replace(/```json\n?|\n?```/g, "").trim();
     
     try {
