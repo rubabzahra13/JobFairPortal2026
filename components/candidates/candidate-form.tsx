@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Candidate, Archetype, SCORE_DIMENSIONS, calcTotalScore, ARCHETYPE_META } from "@/lib/types";
-import { saveCandidate, generateId } from "@/lib/store";
+import { generateId, saveCandidate } from "@/lib/store";
 import { getSubmissionById, updateSubmissionStatus, Submission } from "@/lib/submissions";
 import { ViewCvButton } from "@/components/submissions/view-cv-button";
 import { ScoreSlider } from "./score-slider";
@@ -14,11 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, UserPlus, FileText } from "lucide-react";
+import { AlertCircle, ArrowLeft, FileText, Loader2, Save, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CandidateFormProps {
   initial?: Candidate;
+}
+
+function submissionDegree(submission: Submission | null): string {
+  if (!submission?.degree) return "";
+  return `${submission.degree}${submission.university ? `, ${submission.university}` : ""}`;
 }
 
 export function CandidateForm({ initial }: CandidateFormProps) {
@@ -26,55 +31,41 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submission");
   const isEdit = !!initial;
+  const submission: Submission | null =
+    (!isEdit && submissionId ? getSubmissionById(submissionId) : null) ??
+    (isEdit && initial?.sourceSubmissionId
+      ? getSubmissionById(initial.sourceSubmissionId)
+      : null) ??
+    null;
 
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [name, setName] = useState(initial?.name ?? "");
-  const [hometown, setHometown] = useState(initial?.hometown ?? "");
-  const [degree, setDegree] = useState(initial?.degree ?? "");
-  const [batch, setBatch] = useState(initial?.batch ?? "");
-  const [yearsOfExperience, setYearsOfExperience] = useState(initial?.yearsOfExperience ?? "");
-  const [evaluators, setEvaluators] = useState(initial?.evaluators ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [archetype, setArchetype] = useState<Archetype>(initial?.archetype ?? "pilot");
+  const [name, setName] = useState(initial?.name ?? submission?.name ?? "");
+  const [email, setEmail] = useState(initial?.email ?? submission?.email ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? submission?.phone ?? "");
+  const [hometown, setHometown] = useState(initial?.hometown ?? submission?.hometown ?? "");
+  const [currentCity, setCurrentCity] = useState(initial?.currentCity ?? "");
+  const [graduationLocationPlan, setGraduationLocationPlan] = useState(
+    initial?.graduationLocationPlan ?? ""
+  );
+  const [degree, setDegree] = useState(initial?.degree ?? submissionDegree(submission));
+  const [batch, setBatch] = useState(initial?.batch ?? submission?.batch ?? "");
+  const [yearsOfExperience, setYearsOfExperience] = useState(
+    initial?.yearsOfExperience ?? submission?.experience ?? ""
+  );
+  const [evaluators, setEvaluators] = useState(
+    initial?.evaluators ?? (submission ? "Pre-filled" : "")
+  );
+  const [notes, setNotes] = useState(initial?.notes ?? submission?.personalitySummary ?? "");
+  const [archetype, setArchetype] = useState<Archetype>(
+    initial?.archetype ?? submission?.suggestedArchetype ?? "pilot"
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState({
-    technicalDepth: initial?.scores.technicalDepth ?? 5,
-    personality: initial?.scores.personality ?? 5,
-    communication: initial?.scores.communication ?? 5,
-    khandaniPan: initial?.scores.khandaniPan ?? 5,
+    technicalDepth: initial?.scores.technicalDepth ?? submission?.suggestedScores?.technicalDepth ?? 5,
+    personality: initial?.scores.personality ?? submission?.suggestedScores?.personality ?? 5,
+    communication: initial?.scores.communication ?? submission?.suggestedScores?.communication ?? 5,
+    khandaniPan: initial?.scores.khandaniPan ?? submission?.suggestedScores?.khandaniPan ?? 5,
   });
-
-  // Load submission data if submissionId is present
-  useEffect(() => {
-    if (submissionId && !isEdit) {
-      const sub = getSubmissionById(submissionId);
-      if (sub) {
-        setSubmission(sub);
-        // Pre-fill form with submission data
-        setName(sub.name || "");
-        setDegree(sub.degree ? `${sub.degree}${sub.university ? `, ${sub.university}` : ""}` : "");
-        setBatch(sub.batch || "");
-        setYearsOfExperience(sub.experience || "");
-        setHometown(sub.hometown || "");
-        setEvaluators("Pre-filled");
-        if (sub.suggestedArchetype) {
-          setArchetype(sub.suggestedArchetype);
-        }
-        if (sub.suggestedScores) {
-          setScores({ ...sub.suggestedScores });
-        }
-        if (sub.personalitySummary) {
-          setNotes(sub.personalitySummary);
-        }
-      }
-    }
-  }, [submissionId, isEdit]);
-
-  useEffect(() => {
-    if (isEdit && initial?.sourceSubmissionId) {
-      const sub = getSubmissionById(initial.sourceSubmissionId);
-      if (sub) setSubmission(sub);
-    }
-  }, [isEdit, initial?.sourceSubmissionId]);
 
   const totalScore = calcTotalScore(scores);
 
@@ -82,48 +73,63 @@ export function CandidateForm({ initial }: CandidateFormProps) {
     setScores((prev) => ({ ...prev, [key]: val }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    if (!hometown.trim() || !graduationLocationPlan.trim()) {
+      setError("Hometown and plan after graduation are required.");
+      return;
+    }
+
+    setSaving(true);
     const candidateId = initial?.id ?? generateId();
     const evaluatorsTrimmed = evaluators.trim();
-    const evaluatorsFinal =
-      evaluatorsTrimmed === "Pre-filled" ? "" : evaluatorsTrimmed;
+    const evaluatorsFinal = evaluatorsTrimmed === "Pre-filled" ? "" : evaluatorsTrimmed;
 
     const candidate: Candidate = {
+      ...initial,
       id: candidateId,
       name: name.trim() || "Anonymous",
-      hometown,
-      degree,
-      batch,
-      yearsOfExperience,
+      email: email.trim(),
+      phone: phone.trim(),
+      hometown: hometown.trim(),
+      currentCity: currentCity.trim(),
+      graduationLocationPlan: graduationLocationPlan.trim(),
+      degree: degree.trim(),
+      batch: batch.trim(),
+      yearsOfExperience: yearsOfExperience.trim(),
       evaluators: evaluatorsFinal,
-      notes,
+      notes: notes.trim(),
       archetype,
       scores,
+      status: initial?.status ?? "screening",
+      source: initial?.source ?? "panel",
       sourceSubmissionId: submissionId ?? initial?.sourceSubmissionId,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
-    saveCandidate(candidate);
 
-    // Update submission status if this came from a submission
-    if (submissionId) {
-      updateSubmissionStatus(submissionId, "evaluated", candidateId);
+    try {
+      await saveCandidate(candidate);
+      if (submissionId) updateSubmissionStatus(submissionId, "evaluated", candidateId);
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save candidate");
+    } finally {
+      setSaving(false);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   const totalColor =
     totalScore >= 8
       ? "text-emerald-400"
       : totalScore >= 5
-      ? "text-amber-400"
-      : "text-red-400";
+        ? "text-amber-400"
+        : "text-red-400";
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <ButtonLink href={submissionId ? "/submissions" : "/"} variant="ghost" size="icon" className="h-8 w-8">
@@ -151,25 +157,24 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         </div>
       </div>
 
-      {/* CV Info Banner */}
       {submission && (
         <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center">
-          <FileText className="h-5 w-5 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
+          <FileText className="h-5 w-5 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">CV Pre-filled</p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="truncate text-xs text-muted-foreground">
               {submission.email || submission.phone || "Review and adjust the extracted info below"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1 truncate">{submission.cvFileName}</p>
+            <p className="mt-1 truncate text-[11px] text-muted-foreground">{submission.cvFileName}</p>
             {(submission.suggestedArchetype || submission.suggestedScores) && (
-              <p className="text-xs text-primary/95 mt-2 leading-relaxed">
+              <p className="mt-2 text-xs leading-relaxed text-primary/95">
                 <span className="font-semibold">AI starting point (CV only): </span>
                 {[
                   submission.suggestedArchetype
                     ? ARCHETYPE_META[submission.suggestedArchetype].label
                     : null,
                   submission.suggestedScores
-                    ? `scores ~${calcTotalScore(submission.suggestedScores)}/10 avg — confirm after conversation`
+                    ? `scores ~${calcTotalScore(submission.suggestedScores)}/10 avg - confirm after conversation`
                     : null,
                 ]
                   .filter(Boolean)
@@ -181,7 +186,13 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         </div>
       )}
 
-      {/* Section: Identity */}
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -203,6 +214,31 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-9 bg-card text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone" className="text-xs">
+              Phone
+            </Label>
+            <Input
+              id="phone"
+              placeholder="+92..."
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="h-9 bg-card text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="degree" className="text-xs">
               Degree & Major
             </Label>
@@ -220,7 +256,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             </Label>
             <Input
               id="batch"
-              placeholder="e.g. 2025, 7th Semester"
+              placeholder="e.g. 2026, 8th Semester"
               value={batch}
               onChange={(e) => setBatch(e.target.value)}
               className="h-9 bg-card text-sm"
@@ -239,15 +275,41 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="location" className="text-xs">
-              Location
+            <Label htmlFor="hometown" className="text-xs">
+              Hometown <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="location"
+              id="hometown"
+              required
               placeholder="e.g. Lahore"
               value={hometown}
               onChange={(e) => setHometown(e.target.value)}
               className="h-9 bg-card text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="currentCity" className="text-xs">
+              Current City
+            </Label>
+            <Input
+              id="currentCity"
+              placeholder="e.g. Islamabad"
+              value={currentCity}
+              onChange={(e) => setCurrentCity(e.target.value)}
+              className="h-9 bg-card text-sm"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="graduationLocationPlan" className="text-xs">
+              Plan After Graduation <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="graduationLocationPlan"
+              required
+              placeholder="Where do they plan to work/live after graduation?"
+              value={graduationLocationPlan}
+              onChange={(e) => setGraduationLocationPlan(e.target.value)}
+              className="min-h-20 resize-none bg-card text-sm"
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
@@ -267,7 +329,6 @@ export function CandidateForm({ initial }: CandidateFormProps) {
 
       <Separator />
 
-      {/* Section: Scores */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           The Four Dimensions
@@ -290,20 +351,18 @@ export function CandidateForm({ initial }: CandidateFormProps) {
 
       <Separator />
 
-      {/* Section: Archetype */}
       <section className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Archetype Tag
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            The scores tell you how good — the tag tells you who they are.
+            The scores tell you how good - the tag tells you who they are.
           </p>
         </div>
 
-        {/* AI Archetype Suggestion */}
         {submission?.evaluationSuggestionNote ? (
-          <div className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2.5 space-y-1.5">
+          <div className="space-y-1.5 rounded-md border border-primary/25 bg-primary/5 px-3 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary/90">
               AI suggestion (from CV only)
             </p>
@@ -318,7 +377,6 @@ export function CandidateForm({ initial }: CandidateFormProps) {
 
       <Separator />
 
-      {/* Section: Notes */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Notes
@@ -331,7 +389,6 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         />
       </section>
 
-      {/* Submit */}
       <div className="flex items-center justify-between border-t border-border pt-6">
         <div className="flex items-center gap-3 sm:hidden">
           <p className="text-xs text-muted-foreground">Avg</p>
@@ -339,13 +396,13 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             {totalScore}/10
           </p>
         </div>
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="ml-auto flex items-center gap-3">
           <ButtonLink href={submissionId ? "/submissions" : "/"} variant="ghost" size="sm">
             Cancel
           </ButtonLink>
-          <Button type="submit" size="sm" className="gap-2">
-            <Save className="h-3.5 w-3.5" />
-            {isEdit ? "Save Changes" : "Save Candidate"}
+          <Button type="submit" size="sm" className="gap-2" disabled={saving}>
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? "Saving..." : isEdit ? "Save Changes" : "Save Candidate"}
           </Button>
         </div>
       </div>

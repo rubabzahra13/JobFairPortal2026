@@ -10,8 +10,12 @@ export interface Scores {
 export interface Candidate {
   id: string;
   name: string;
+  email?: string;
+  phone?: string;
   // Metadata
   hometown: string;
+  currentCity?: string;
+  graduationLocationPlan?: string;
   degree: string;
   batch: string;
   yearsOfExperience: string;
@@ -23,10 +27,18 @@ export interface Candidate {
   evaluators: string;
   // Notes
   notes: string;
+  status?: "screening" | "shortlisted" | "rejected" | "hired";
+  source?: "qr" | "panel" | "import";
+  resumeFileName?: string;
+  resumeUrl?: string;
+  resumeText?: string;
+  geminiInsight?: string;
+  geminiUpdatedAt?: string;
   // Link back to CV submission (IndexedDB PDF key)
   sourceSubmissionId?: string;
   // Timestamp
   createdAt: string;
+  updatedAt?: string;
 }
 
 export const ARCHETYPE_META: Record<

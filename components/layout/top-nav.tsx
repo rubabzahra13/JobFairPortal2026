@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BookOpen, FileText, LayoutDashboard, Plus, Zap } from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard, LogIn, LogOut, Plus, QrCode, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 
 const navItems = [
@@ -14,6 +15,55 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const isPublicPage =
+    pathname === "/login" || pathname === "/apply" || pathname === "/upload";
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  if (isPublicPage) {
+    return (
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link href="/apply" className="flex shrink-0 items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+              <Zap className="h-4 w-4 text-primary-foreground" fill="currentColor" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm font-semibold tracking-tight text-foreground">
+                VECTOR AI
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:block">
+                Job Fair
+              </span>
+            </div>
+          </Link>
+          <ButtonLink
+            href={pathname === "/login" ? "/apply" : "/login"}
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+          >
+            {pathname === "/login" ? (
+              <>
+                <QrCode className="h-3.5 w-3.5" />
+                Candidate Form
+              </>
+            ) : (
+              <>
+                <LogIn className="h-3.5 w-3.5" />
+                Panel Login
+              </>
+            )}
+          </ButtonLink>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -58,10 +108,24 @@ export function TopNav() {
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Review CVs</span>
           </ButtonLink>
+          <ButtonLink href="/apply" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+            <QrCode className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Apply</span>
+          </ButtonLink>
           <ButtonLink href="/candidates/new" size="sm" className="h-8 gap-1.5 text-xs">
             <Plus className="h-3.5 w-3.5" />
             <span>Add Candidate</span>
           </ButtonLink>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="h-8 w-8 text-muted-foreground"
+            title="Logout"
+            onClick={() => void handleLogout()}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </header>

@@ -12,24 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import {
+  FileText,
   Eye,
   Pencil,
   Search,
-  Trash2,
   User,
   X,
 } from "lucide-react";
@@ -49,15 +38,13 @@ const ARCHETYPE_FILTERS: Array<{ value: Archetype | "all"; label: string }> = [
 
 interface CandidatesTableProps {
   candidates: Candidate[];
-  onDelete: (id: string) => void;
 }
 
-export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) {
+export function CandidatesTable({ candidates }: CandidatesTableProps) {
   const [search, setSearch] = useState("");
   const [archetypeFilter, setArchetypeFilter] = useState<Archetype | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -167,8 +154,8 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
               >
                 Score
               </TableHead>
-              <TableHead className="hidden h-11 min-w-[140px] px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-                Scores
+              <TableHead className="hidden h-11 min-w-[150px] px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
+                Source
               </TableHead>
               <TableHead
                 className="hidden h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell cursor-pointer select-none hover:text-foreground"
@@ -216,7 +203,7 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                           >
                             {candidate.name}
                           </p>
-                          {candidate.hometown ? (
+                        {candidate.hometown ? (
                             <p
                               className="truncate text-[11px] leading-relaxed text-muted-foreground"
                               title={candidate.hometown}
@@ -224,6 +211,25 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                               {candidate.hometown}
                             </p>
                           ) : null}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            {candidate.status ? (
+                              <span className="rounded border border-border bg-secondary/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {candidate.status}
+                              </span>
+                            ) : null}
+                            {candidate.resumeUrl ? (
+                              <a
+                                href={candidate.resumeUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <FileText className="h-3 w-3" />
+                                Resume
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -252,34 +258,9 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                       <ScoreRing score={total} size="sm" />
                     </TableCell>
                     <TableCell className="hidden align-middle whitespace-nowrap py-3.5 px-3 md:table-cell">
-                      <div className="inline-flex flex-nowrap items-center gap-x-2 rounded-md border border-border bg-secondary/40 px-2 py-1.5 tabular-nums">
-                        {(
-                          [
-                            ["T", candidate.scores.technicalDepth],
-                            ["P", candidate.scores.personality],
-                            ["C", candidate.scores.communication],
-                            ["K", candidate.scores.khandaniPan],
-                          ] as [string, number][]
-                        ).map(([k, v]) => (
-                          <div key={k} className="flex shrink-0 items-center gap-0.5">
-                            <span className="text-[9px] font-medium text-muted-foreground">
-                              {k}
-                            </span>
-                            <span
-                              className={cn(
-                                "min-w-[1.375rem] text-center text-xs font-semibold tabular-nums",
-                                v >= 8
-                                  ? "text-emerald-400"
-                                  : v >= 5
-                                    ? "text-amber-400"
-                                    : "text-red-400"
-                              )}
-                            >
-                              {v}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      <span className="rounded border border-border bg-secondary/40 px-2 py-1 text-xs capitalize text-muted-foreground">
+                        {candidate.source ?? "panel"}
+                      </span>
                     </TableCell>
                     <TableCell className="hidden align-middle whitespace-nowrap py-3.5 px-3 sm:table-cell">
                       <span className="text-xs tabular-nums text-muted-foreground">
@@ -306,16 +287,6 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                         >
                           <Pencil className="h-4 w-4" />
                         </ButtonLink>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          title="Delete candidate"
-                          onClick={() => setDeleteId(candidate.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -326,32 +297,6 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
         </Table>
       </div>
 
-      {/* Delete dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete candidate?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. The candidate and all their scores
-              will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-secondary border-border">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleteId) {
-                  onDelete(deleteId);
-                  setDeleteId(null);
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
