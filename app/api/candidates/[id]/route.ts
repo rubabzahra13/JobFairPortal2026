@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCandidateById, upsertCandidate } from "@/lib/google-sheets";
+import { normalizeCandidateEvaluation } from "@/lib/evaluator-scorecards";
 import type { Candidate } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ export async function PATCH(request: NextRequest, context: CandidateRouteContext
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const candidate: Candidate = {
+  const candidate = normalizeCandidateEvaluation({
     ...existing,
     ...body,
     id: existing.id,
@@ -38,8 +39,12 @@ export async function PATCH(request: NextRequest, context: CandidateRouteContext
       ...existing.scores,
       ...body.scores,
     },
+    evaluatorScorecards: {
+      ...existing.evaluatorScorecards,
+      ...body.evaluatorScorecards,
+    },
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   await upsertCandidate(candidate);
 

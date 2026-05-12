@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listCandidates, upsertCandidate } from "@/lib/google-sheets";
+import { normalizeCandidateEvaluation } from "@/lib/evaluator-scorecards";
 import type { Candidate, Scores } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date().toISOString();
-  const candidate: Candidate = {
+  const candidate = normalizeCandidateEvaluation({
     id: body.id || `cand_${crypto.randomUUID()}`,
     name: stringField(body.name),
     email: body.email,
@@ -46,12 +47,13 @@ export async function POST(request: NextRequest) {
     resumeFileName: body.resumeFileName,
     resumeUrl: body.resumeUrl,
     resumeText: body.resumeText,
+    evaluatorScorecards: body.evaluatorScorecards,
     geminiInsight: body.geminiInsight,
     geminiUpdatedAt: body.geminiUpdatedAt,
     sourceSubmissionId: body.sourceSubmissionId,
     createdAt: body.createdAt || now,
     updatedAt: now,
-  };
+  });
 
   await upsertCandidate(candidate);
 

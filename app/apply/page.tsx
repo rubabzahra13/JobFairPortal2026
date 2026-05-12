@@ -5,7 +5,51 @@ import { AlertCircle, CheckCircle2, FileText, Loader2, Send, Zap } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
+const BATCH_OPTIONS = ["22", "23", "24"] as const;
+const DEGREE_GROUPS = [
+  {
+    label: "Undergraduate Programs (Bachelor's)",
+    options: [
+      "Bachelor of Business Administration (BBA)",
+      "Bachelor of Science in Accounting and Finance",
+      "Bachelor of Science in Artificial Intelligence",
+      "Bachelor of Science in Business Analytics",
+      "Bachelor of Science in Computer Engineering",
+      "Bachelor of Science in Computer Science",
+      "Bachelor of Science in Cyber Security",
+      "Bachelor of Science in Data Science",
+      "Bachelor of Science in Electrical Engineering",
+      "Bachelor of Science in Financial Technology (FinTech)",
+      "Bachelor of Science in Software Engineering",
+    ],
+  },
+  {
+    label: "Graduate Programs (Master's)",
+    options: [
+      "Master of Business Administration (MBA)",
+      "Master of Science in Artificial Intelligence",
+      "Master of Science in Business Analytics",
+      "Master of Science in Computer Science",
+      "Master of Science in Cyber Security",
+      "Master of Science in Data Science",
+      "Master of Science in Electrical Engineering",
+      "Master of Science in Mathematics",
+      "Master of Science in Software Engineering",
+      "Master of Science in Software Project Management",
+    ],
+  },
+  {
+    label: "Postgraduate Programs (PhD)",
+    options: [
+      "Doctor of Philosophy in Computer Science",
+      "Doctor of Philosophy in Electrical Engineering",
+      "Doctor of Philosophy in Management Sciences",
+      "Doctor of Philosophy in Mathematics",
+      "Doctor of Philosophy in Software Engineering",
+    ],
+  },
+] as const;
 
 type ApplyResponse = {
   candidate?: {
@@ -60,8 +104,8 @@ export default function ApplyPage() {
 
   if (submittedName) {
     return (
-      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-xl items-center px-4 py-10 sm:px-6">
-        <div className="w-full space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-xl items-center px-4 py-8 sm:px-6">
+        <div className="w-full space-y-6 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
               <CheckCircle2 className="h-6 w-6 text-emerald-400" />
@@ -85,7 +129,7 @@ export default function ApplyPage() {
             </div>
           ) : null}
 
-          <Button type="button" variant="outline" onClick={() => setSubmittedName("")}>
+          <Button type="button" variant="outline" className="w-full" onClick={() => setSubmittedName("")}>
             Submit another candidate
           </Button>
         </div>
@@ -94,11 +138,11 @@ export default function ApplyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="mx-auto max-w-xl px-4 py-5 sm:px-6 sm:py-8">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <div className="space-y-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Zap className="h-6 w-6 text-primary-foreground" fill="currentColor" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary sm:h-12 sm:w-12">
+            <Zap className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" fill="currentColor" />
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-primary">
@@ -115,83 +159,99 @@ export default function ApplyPage() {
           </div>
         ) : null}
 
-        <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Contact
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
               <Label htmlFor="name" className="text-xs">
                 Full Name <span className="text-destructive">*</span>
               </Label>
-              <Input id="name" name="name" required className="bg-card" />
+              <Input id="name" name="name" required className="h-11 bg-card text-base sm:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs">
                 Email <span className="text-destructive">*</span>
               </Label>
-              <Input id="email" name="email" type="email" required className="bg-card" />
+              <Input id="email" name="email" type="email" required className="h-11 bg-card text-base sm:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone" className="text-xs">
                 Phone <span className="text-destructive">*</span>
               </Label>
-              <Input id="phone" name="phone" required className="bg-card" />
+              <Input id="phone" name="phone" required className="h-11 bg-card text-base sm:text-sm" />
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Academic Profile
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="degree" className="text-xs">
                 Degree / Major <span className="text-destructive">*</span>
               </Label>
-              <Input id="degree" name="degree" required placeholder="BS Computer Science" className="bg-card" />
+              <select
+                id="degree"
+                name="degree"
+                required
+                defaultValue=""
+                className="h-11 w-full rounded-lg border border-input bg-card px-3 text-base text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/50 sm:text-sm"
+              >
+                <option value="" disabled>
+                  Select degree / major
+                </option>
+                {DEGREE_GROUPS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((degree) => (
+                      <option key={degree} value={degree}>
+                        {degree}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="batch" className="text-xs">
-                Batch / Graduation Year <span className="text-destructive">*</span>
+                Batch <span className="text-destructive">*</span>
               </Label>
-              <Input id="batch" name="batch" required placeholder="2026" className="bg-card" />
+              <select
+                id="batch"
+                name="batch"
+                required
+                defaultValue=""
+                className="h-11 w-full rounded-lg border border-input bg-card px-3 text-base text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/50 sm:text-sm"
+              >
+                <option value="" disabled>
+                  Select batch
+                </option>
+                {BATCH_OPTIONS.map((batch) => (
+                  <option key={batch} value={batch}>
+                    {batch}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="hometown" className="text-xs">
                 Hometown <span className="text-destructive">*</span>
               </Label>
-              <Input id="hometown" name="hometown" required className="bg-card" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="currentCity" className="text-xs">
-                Current City
-              </Label>
-              <Input id="currentCity" name="currentCity" placeholder="Islamabad" className="bg-card" />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="graduationLocationPlan" className="text-xs">
-                Where do you plan to be after graduating?{" "}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="graduationLocationPlan"
-                name="graduationLocationPlan"
-                required
-                className="min-h-24 resize-none bg-card"
-              />
+              <Input id="hometown" name="hometown" required className="h-11 bg-card text-base sm:text-sm" />
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Resume
           </h2>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background/40 px-4 py-8 text-center hover:border-primary/60">
             <FileText className="h-8 w-8 text-muted-foreground" />
-            <span className="mt-3 text-sm font-medium">
+            <span className="mt-3 max-w-full truncate text-sm font-medium">
               {file ? file.name : "Upload PDF resume"}
             </span>
             <span className="mt-1 text-xs text-muted-foreground">
@@ -207,12 +267,10 @@ export default function ApplyPage() {
           </label>
         </section>
 
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" className="gap-2" disabled={submitting}>
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {submitting ? "Submitting..." : "Submit"}
-          </Button>
-        </div>
+        <Button type="submit" size="lg" className="h-11 w-full gap-2" disabled={submitting}>
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {submitting ? "Submitting..." : "Submit"}
+        </Button>
       </form>
     </div>
   );

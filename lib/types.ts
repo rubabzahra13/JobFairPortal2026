@@ -7,6 +7,27 @@ export interface Scores {
   khandaniPan: number;
 }
 
+export const PANEL_EVALUATORS = [
+  { id: "ibrahim", displayName: "Ibrahim Basit" },
+  { id: "saleh", displayName: "Saleh" },
+  { id: "rubab", displayName: "Rubab" },
+  { id: "sabah", displayName: "Sabah Nawab" },
+  { id: "maaz", displayName: "Maaz Ali Nadeem" },
+  { id: "tauseef", displayName: "Tauseef Razzaq" },
+] as const;
+
+export type PanelEvaluatorId = (typeof PANEL_EVALUATORS)[number]["id"];
+
+export interface EvaluatorScorecard {
+  evaluatorId: PanelEvaluatorId;
+  displayName: string;
+  scores: Scores;
+  notes: string;
+  updatedAt: string;
+}
+
+export type EvaluatorScorecards = Partial<Record<PanelEvaluatorId, EvaluatorScorecard>>;
+
 export interface Candidate {
   id: string;
   name: string;
@@ -21,6 +42,7 @@ export interface Candidate {
   yearsOfExperience: string;
   // Scores 1-10
   scores: Scores;
+  evaluatorScorecards?: EvaluatorScorecards;
   // Archetype tag
   archetype: Archetype;
   // Evaluators

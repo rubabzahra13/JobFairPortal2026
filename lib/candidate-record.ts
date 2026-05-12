@@ -1,4 +1,16 @@
-import type { Archetype, Candidate, Scores } from "./types";
+import {
+  PANEL_EVALUATORS,
+  type Archetype,
+  type Candidate,
+  type EvaluatorScorecards,
+  type Scores,
+} from "./types";
+import {
+  aggregateEvaluatorScores,
+  evaluatorDisplayNames,
+  normalizeEvaluatorScorecards,
+  submittedScorecards,
+} from "./evaluator-scorecards";
 
 export const CANDIDATE_STATUSES = ["screening", "shortlisted", "rejected", "hired"] as const;
 export const CANDIDATE_SOURCES = ["qr", "panel", "import"] as const;
@@ -44,10 +56,10 @@ export const CANDIDATE_SHEET_HEADERS = [
   "Degree / Major",
   "Batch / Graduation Year",
   "Experience",
-  "Panel Technical Score",
-  "Panel Personality Score",
-  "Panel Communication Score",
-  "Panel Khandani Pan Score",
+  "Aggregate Technical Score",
+  "Aggregate Personality Score",
+  "Aggregate Communication Score",
+  "Aggregate Khandani Pan Score",
   "Archetype",
   "Evaluators",
   "Panel Notes",
@@ -72,6 +84,16 @@ export const CANDIDATE_SHEET_HEADERS = [
   "Source Submission ID",
   "Created At",
   "Updated At",
+  "Evaluator Count",
+  "Submitted Evaluators",
+  ...PANEL_EVALUATORS.flatMap((evaluator) => [
+    `${evaluator.displayName} Technical`,
+    `${evaluator.displayName} Personality`,
+    `${evaluator.displayName} Communication`,
+    `${evaluator.displayName} Khandani Pan`,
+    `${evaluator.displayName} Notes`,
+    `${evaluator.displayName} Updated At`,
+  ]),
 ] as const;
 
 type CandidateStatus = NonNullable<Candidate["status"]>;
@@ -191,10 +213,67 @@ function geminiInsightFromSheet(row: readonly string[]): string {
   return hasInsight ? JSON.stringify(insight) : "";
 }
 
+function evaluatorScorecardsToSheetCells(scorecards: EvaluatorScorecards | undefined): string[] {
+  return PANEL_EVALUATORS.flatMap((evaluator) => {
+    const scorecard = scorecards?.[evaluator.id];
+
+    return [
+      optionalScore(scorecard?.scores.technicalDepth),
+      optionalScore(scorecard?.scores.personality),
+      optionalScore(scorecard?.scores.communication),
+      optionalScore(scorecard?.scores.khandaniPan),
+      scorecard?.notes ?? "",
+      scorecard?.updatedAt ?? "",
+    ];
+  });
+}
+
+function evaluatorScorecardsFromSheet(row: readonly string[]): EvaluatorScorecards {
+  const scorecards: EvaluatorScorecards = {};
+  const startIndex = 40;
+
+  PANEL_EVALUATORS.forEach((evaluator, index) => {
+    const offset = startIndex + index * 6;
+    const updatedAt = row[offset + 5] ?? "";
+    const hasAnyScore =
+      row[offset] || row[offset + 1] || row[offset + 2] || row[offset + 3];
+
+    if (!updatedAt && !hasAnyScore) return;
+
+    scorecards[evaluator.id] = {
+      evaluatorId: evaluator.id,
+      displayName: evaluator.displayName,
+      scores: {
+        technicalDepth: parseNumber(row[offset]),
+        personality: parseNumber(row[offset + 1]),
+        communication: parseNumber(row[offset + 2]),
+        khandaniPan: parseNumber(row[offset + 3]),
+      },
+      notes: row[offset + 4] ?? "",
+      updatedAt,
+    };
+  });
+
+  return normalizeEvaluatorScorecards(scorecards);
+}
+
+function aggregateScoresFromRow(row: readonly string[], scorecards: EvaluatorScorecards): Scores {
+  return aggregateEvaluatorScores(scorecards, {
+    technicalDepth: parseNumber(row[10]),
+    personality: parseNumber(row[11]),
+    communication: parseNumber(row[12]),
+    khandaniPan: parseNumber(row[13]),
+  });
+}
+
 export function candidateToSheetRow(candidate: Candidate): string[] {
   const geminiInsight = parseCandidateGeminiInsight(candidate.geminiInsight);
   const suggestedScores = geminiInsight?.suggestedScores ?? null;
   const scoreReasons = geminiInsight?.scoreReasons ?? {};
+  const evaluatorScorecards = normalizeEvaluatorScorecards(candidate.evaluatorScorecards);
+  const aggregateScores = aggregateEvaluatorScores(evaluatorScorecards, candidate.scores);
+  const submitted = submittedScorecards(evaluatorScorecards);
+  const submittedNames = evaluatorDisplayNames(evaluatorScorecards);
 
   return [
     candidate.id,
@@ -207,10 +286,10 @@ export function candidateToSheetRow(candidate: Candidate): string[] {
     candidate.degree,
     candidate.batch,
     candidate.yearsOfExperience,
-    candidateScore(candidate.scores, "technicalDepth"),
-    candidateScore(candidate.scores, "personality"),
-    candidateScore(candidate.scores, "communication"),
-    candidateScore(candidate.scores, "khandaniPan"),
+    candidateScore(aggregateScores, "technicalDepth"),
+    candidateScore(aggregateScores, "personality"),
+    candidateScore(aggregateScores, "communication"),
+    candidateScore(aggregateScores, "khandaniPan"),
     candidate.archetype,
     candidate.evaluators,
     candidate.notes,
@@ -235,10 +314,16 @@ export function candidateToSheetRow(candidate: Candidate): string[] {
     candidate.sourceSubmissionId ?? "",
     candidate.createdAt,
     candidate.updatedAt ?? candidate.createdAt,
+    String(submitted.length),
+    submittedNames,
+    ...evaluatorScorecardsToSheetCells(evaluatorScorecards),
   ];
 }
 
 export function sheetRowToCandidate(row: readonly string[]): Candidate {
+  const evaluatorScorecards = evaluatorScorecardsFromSheet(row);
+  const hasEvaluatorScorecards = Object.keys(evaluatorScorecards).length > 0;
+
   return {
     id: row[0] ?? "",
     name: row[1] ?? "",
@@ -250,14 +335,10 @@ export function sheetRowToCandidate(row: readonly string[]): Candidate {
     degree: row[7] ?? "",
     batch: row[8] ?? "",
     yearsOfExperience: row[9] ?? "",
-    scores: {
-      technicalDepth: parseNumber(row[10]),
-      personality: parseNumber(row[11]),
-      communication: parseNumber(row[12]),
-      khandaniPan: parseNumber(row[13]),
-    },
+    scores: aggregateScoresFromRow(row, evaluatorScorecards),
+    evaluatorScorecards: hasEvaluatorScorecards ? evaluatorScorecards : undefined,
     archetype: parseArchetype(row[14]),
-    evaluators: row[15] ?? "",
+    evaluators: row[39] || row[15] || "",
     notes: row[16] ?? "",
     status: parseStatus(row[17]),
     source: parseSource(row[18]),

@@ -279,7 +279,8 @@ async function formatCandidateSheet(sheetId: number): Promise<void> {
         dimensionWidthRequest(sheetId, 10, 14, 120),
         dimensionWidthRequest(sheetId, 14, 22, 160),
         dimensionWidthRequest(sheetId, 22, 34, 240),
-        dimensionWidthRequest(sheetId, 34, columnCount, 155),
+        dimensionWidthRequest(sheetId, 34, 40, 155),
+        dimensionWidthRequest(sheetId, 40, columnCount, 145),
       ],
     },
   });

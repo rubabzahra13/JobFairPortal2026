@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { Candidate, ARCHETYPE_META, SCORE_DIMENSIONS, calcTotalScore } from "@/lib/types";
+import { Candidate, ARCHETYPE_META, PANEL_EVALUATORS, SCORE_DIMENSIONS, calcTotalScore } from "@/lib/types";
 import { getCandidate } from "@/lib/store";
 import { getSubmissionByCandidateId, getSubmissionById } from "@/lib/submissions";
 import { ViewCvButton } from "@/components/submissions/view-cv-button";
@@ -148,7 +148,7 @@ export default function CandidateDetailPage({ params }: PageProps) {
           {candidate.hometown && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span>{candidate.hometown}{candidate.currentCity ? ` -> ${candidate.currentCity}` : ""}</span>
+              <span>{candidate.hometown}</span>
             </div>
           )}
           {candidate.yearsOfExperience && (
@@ -166,7 +166,7 @@ export default function CandidateDetailPage({ params }: PageProps) {
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Score Breakdown
+          Aggregate Score Breakdown
         </h2>
         <div className="space-y-5 rounded-xl border border-border bg-card p-5">
           <div className="grid grid-cols-4 gap-4">
@@ -180,6 +180,54 @@ export default function CandidateDetailPage({ params }: PageProps) {
               <ScoreBar key={dim.key} score={candidate.scores[dim.key]} label={dim.label} />
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Panel Scorecards
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {PANEL_EVALUATORS.map((evaluator) => {
+            const scorecard = candidate.evaluatorScorecards?.[evaluator.id];
+
+            return (
+              <div key={evaluator.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{evaluator.displayName}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {scorecard?.updatedAt
+                        ? `Scored ${formatDate(scorecard.updatedAt)}`
+                        : "Not scored yet"}
+                    </p>
+                  </div>
+                  {scorecard ? (
+                    <span className="rounded border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                      {calcTotalScore(scorecard.scores)}/10
+                    </span>
+                  ) : null}
+                </div>
+                {scorecard ? (
+                  <div className="mt-3 space-y-2">
+                    {SCORE_DIMENSIONS.map((dim) => (
+                      <div key={dim.key} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">{dim.label}</span>
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {scorecard.scores[dim.key]}/10
+                        </span>
+                      </div>
+                    ))}
+                    {scorecard.notes ? (
+                      <p className="border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+                        {scorecard.notes}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
 

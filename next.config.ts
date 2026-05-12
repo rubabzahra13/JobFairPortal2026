@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
-const backendOrigin = process.env.BACKEND_ORIGIN?.replace(/\/$/, "");
+const DEFAULT_EC2_BACKEND_ORIGIN = "http://32.196.238.144";
+const backendOrigin = (
+  process.env.BACKEND_ORIGIN ||
+  (process.env.VERCEL ? DEFAULT_EC2_BACKEND_ORIGIN : "")
+).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
   devIndicators: false,
