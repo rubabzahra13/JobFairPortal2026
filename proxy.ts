@@ -20,6 +20,7 @@ const PUBLIC_ASSET_PATHS = new Set([
   "/file.svg",
   "/globe.svg",
   "/next.svg",
+  "/vector-candidate-apply-qr.png",
   "/vercel.svg",
   "/window.svg",
 ]);
