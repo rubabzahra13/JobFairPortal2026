@@ -73,7 +73,7 @@ export default function DashboardPage() {
               <TrendingUp className="h-5 w-5 text-amber-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold tabular-nums">{avgScore || "—"}<span className="text-sm font-normal text-muted-foreground">/10</span></p>
+              <p className="text-2xl font-bold tabular-nums">{avgScore}<span className="text-sm font-normal text-muted-foreground">/10</span></p>
               <p className="text-xs text-muted-foreground">avg score</p>
             </div>
           </div>
