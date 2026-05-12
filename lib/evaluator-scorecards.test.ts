@@ -4,6 +4,7 @@ import {
   aggregateEvaluatorScores,
   evaluatorDisplayNames,
   normalizeCandidateEvaluation,
+  setEvaluatorScorecard,
   upsertEvaluatorScorecard,
 } from "./evaluator-scorecards";
 
@@ -58,6 +59,33 @@ describe("evaluator scorecards", () => {
 
   it("falls back to existing scores when nobody has submitted an evaluator scorecard", () => {
     expect(aggregateEvaluatorScores({}, baseCandidate.scores)).toEqual(baseCandidate.scores);
+  });
+
+  it("keeps a no-score evaluator out of aggregates", () => {
+    const scorecards = setEvaluatorScorecard(
+      {
+        ibrahim: {
+          evaluatorId: "ibrahim",
+          displayName: "Ibrahim Basit",
+          scores: { technicalDepth: 10, personality: 10, communication: 10, khandaniPan: 10 },
+          notes: "Submitted.",
+          updatedAt: "2026-05-12T10:00:00.000Z",
+        },
+      },
+      "rubab",
+      null,
+      "No score yet.",
+      "2026-05-12T10:02:00.000Z"
+    );
+
+    expect(scorecards.rubab).toBeUndefined();
+    expect(evaluatorDisplayNames(scorecards)).toBe("Ibrahim Basit");
+    expect(aggregateEvaluatorScores(scorecards, baseCandidate.scores)).toEqual({
+      technicalDepth: 10,
+      personality: 10,
+      communication: 10,
+      khandaniPan: 10,
+    });
   });
 
   it("updates one evaluator without overwriting another evaluator tab", () => {

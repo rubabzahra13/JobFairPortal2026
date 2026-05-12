@@ -12,7 +12,7 @@ import {
   submittedScorecards,
 } from "./evaluator-scorecards";
 
-export const CANDIDATE_STATUSES = ["screening", "shortlisted", "rejected", "hired"] as const;
+export const CANDIDATE_STATUSES = ["screening", "shortlisted", "rejected", "hired", "no_show"] as const;
 export const CANDIDATE_SOURCES = ["qr", "panel", "import"] as const;
 
 export const LEGACY_CANDIDATE_SHEET_HEADERS = [

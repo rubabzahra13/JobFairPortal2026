@@ -17,7 +17,9 @@ import {
   aggregateEvaluatorScores,
   evaluatorDisplayName,
   evaluatorDisplayNames,
+  setEvaluatorScorecard,
 } from "@/lib/evaluator-scorecards";
+import { CANDIDATE_STATUSES } from "@/lib/candidate-record";
 import {
   ACADEMIC_BATCH_OPTIONS,
   DEGREE_GROUPS,
@@ -35,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, ArrowLeft, FileText, Loader2, Save, UserPlus } from "lucide-react";
+import { AlertCircle, ArrowLeft, CircleSlash2, FileText, Loader2, Save, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CandidateFormProps {
@@ -47,6 +49,16 @@ const DEFAULT_SCORES: Scores = {
   personality: 5,
   communication: 5,
   khandaniPan: 5,
+};
+
+type CandidateStatus = NonNullable<Candidate["status"]>;
+
+const STATUS_LABELS: Record<CandidateStatus, string> = {
+  screening: "Screening",
+  shortlisted: "Shortlisted",
+  rejected: "Rejected",
+  hired: "Hired",
+  no_show: "No show",
 };
 
 function submissionDegree(submission: Submission | null): string {
@@ -88,6 +100,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const [archetype, setArchetype] = useState<Archetype>(
     initial?.archetype ?? submission?.suggestedArchetype ?? "pilot"
   );
+  const [status, setStatus] = useState<CandidateStatus>(initial?.status ?? "screening");
   const [activeEvaluatorId, setActiveEvaluatorId] = useState<PanelEvaluatorId>(() =>
     firstEvaluatorId(initial?.evaluatorScorecards)
   );
@@ -119,7 +132,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
     [initial?.scores, submission?.suggestedScores]
   );
   const activeScorecard = scorecards[activeEvaluatorId];
-  const scores = activeScorecard?.scores ?? baseScores;
+  const scores = activeScorecard?.updatedAt ? activeScorecard.scores : null;
   const evaluatorNotes = activeScorecard?.notes ?? "";
   const aggregateScores = aggregateEvaluatorScores(scorecards, baseScores);
   const customDegree = degree && !isKnownDegree(degree) ? degree : "";
@@ -129,25 +142,32 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   ).length;
   const totalScore = calcTotalScore(aggregateScores);
 
-  function updateActiveScorecard(nextScores: Scores, nextNotes = evaluatorNotes) {
-    setScorecards((prev) => ({
-      ...prev,
-      [activeEvaluatorId]: {
-        evaluatorId: activeEvaluatorId,
-        displayName: evaluatorDisplayName(activeEvaluatorId),
-        scores: nextScores,
-        notes: nextNotes,
-        updatedAt: prev[activeEvaluatorId]?.updatedAt ?? new Date().toISOString(),
-      },
-    }));
+  function updateActiveScorecard(nextScores: Scores | null, nextNotes = evaluatorNotes) {
+    setScorecards((prev) =>
+      setEvaluatorScorecard(
+        prev,
+        activeEvaluatorId,
+        nextScores,
+        nextNotes,
+        prev[activeEvaluatorId]?.updatedAt ?? new Date().toISOString()
+      )
+    );
+  }
+
+  function startActiveScorecard() {
+    updateActiveScorecard(baseScores, evaluatorNotes);
+  }
+
+  function clearActiveScorecard() {
+    updateActiveScorecard(null, "");
   }
 
   function setScore(key: keyof Scores, val: number) {
-    updateActiveScorecard({ ...scores, [key]: val });
+    updateActiveScorecard({ ...(scores ?? baseScores), [key]: val });
   }
 
   function setEvaluatorNotes(notes: string) {
-    updateActiveScorecard(scores, notes);
+    if (scores) updateActiveScorecard(scores, notes);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -162,16 +182,15 @@ export function CandidateForm({ initial }: CandidateFormProps) {
     setSaving(true);
     const candidateId = initial?.id ?? generateId();
     const now = new Date().toISOString();
-    const nextScorecards: EvaluatorScorecards = {
-      ...scorecards,
-      [activeEvaluatorId]: {
-        evaluatorId: activeEvaluatorId,
-        displayName: evaluatorDisplayName(activeEvaluatorId),
-        scores,
-        notes: evaluatorNotes.trim(),
-        updatedAt: scorecards[activeEvaluatorId]?.updatedAt ?? now,
-      },
-    };
+    const nextScorecards: EvaluatorScorecards = scores
+      ? setEvaluatorScorecard(
+          scorecards,
+          activeEvaluatorId,
+          scores,
+          evaluatorNotes.trim(),
+          scorecards[activeEvaluatorId]?.updatedAt ?? now
+        )
+      : scorecards;
     const nextAggregateScores = aggregateEvaluatorScores(nextScorecards, baseScores);
 
     const candidate: Candidate = {
@@ -191,7 +210,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
       archetype,
       scores: nextAggregateScores,
       evaluatorScorecards: nextScorecards,
-      status: initial?.status ?? "screening",
+      status,
       source: initial?.source ?? "panel",
       sourceSubmissionId: submissionId ?? initial?.sourceSubmissionId,
       createdAt: initial?.createdAt ?? now,
@@ -362,6 +381,28 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               className="min-h-20 resize-none bg-card text-sm"
             />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label className="text-xs">Interview Status</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {CANDIDATE_STATUSES.map((statusOption) => (
+                <button
+                  key={statusOption}
+                  type="button"
+                  onClick={() => setStatus(statusOption)}
+                  className={cn(
+                    "min-h-9 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    status === statusOption
+                      ? statusOption === "no_show"
+                        ? "border-red-500/50 bg-red-500/15 text-red-100"
+                        : "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {STATUS_LABELS[statusOption]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -379,7 +420,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               </p>
             </div>
             <div className="text-xs text-muted-foreground">
-              {submittedEvaluatorCount} of {PANEL_EVALUATORS.length} submitted
+              {submittedEvaluatorCount} of {PANEL_EVALUATORS.length} scored
             </div>
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
@@ -409,27 +450,62 @@ export function CandidateForm({ initial }: CandidateFormProps) {
           </div>
         </div>
 
-        <div className="space-y-3">
-          {SCORE_DIMENSIONS.map((dim) => (
-            <ScoreSlider
-              key={dim.key}
-              label={dim.label}
-              description={dim.description}
-              lowLabel={dim.lowLabel}
-              highLabel={dim.highLabel}
-              value={scores[dim.key]}
-              onChange={(val) => setScore(dim.key, val)}
-              aiReason={submission?.suggestedScoreReasons?.[dim.key]}
-            />
-          ))}
-        </div>
+        {scores ? (
+          <>
+            <div className="space-y-3">
+              {SCORE_DIMENSIONS.map((dim) => (
+                <ScoreSlider
+                  key={dim.key}
+                  label={dim.label}
+                  description={dim.description}
+                  lowLabel={dim.lowLabel}
+                  highLabel={dim.highLabel}
+                  value={scores[dim.key]}
+                  onChange={(val) => setScore(dim.key, val)}
+                  aiReason={submission?.suggestedScoreReasons?.[dim.key]}
+                />
+              ))}
+            </div>
 
-        <Textarea
-          placeholder={`Notes from ${evaluatorDisplayName(activeEvaluatorId)}...`}
-          value={evaluatorNotes}
-          onChange={(e) => setEvaluatorNotes(e.target.value)}
-          className="min-h-24 resize-none bg-card text-sm"
-        />
+            <div className="space-y-3">
+              <Textarea
+                placeholder={`Notes from ${evaluatorDisplayName(activeEvaluatorId)}...`}
+                value={evaluatorNotes}
+                onChange={(e) => setEvaluatorNotes(e.target.value)}
+                className="min-h-24 resize-none bg-card text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={clearActiveScorecard}
+              >
+                <CircleSlash2 className="h-4 w-4" />
+                Clear score
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-start gap-4 rounded-lg border border-dashed border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <CircleSlash2 className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  No score for {evaluatorDisplayName(activeEvaluatorId)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This tab is excluded from the aggregate.
+                </p>
+              </div>
+            </div>
+            <Button type="button" size="sm" onClick={startActiveScorecard}>
+              Start scoring
+            </Button>
+          </div>
+        )}
       </section>
 
       <Separator />

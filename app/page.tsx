@@ -125,7 +125,7 @@ export default function DashboardPage() {
           </ButtonLink>
         </div>
       ) : (
-        <CandidatesTable candidates={candidates} />
+        <CandidatesTable candidates={candidates} onCandidateChanged={refresh} />
       )}
     </div>
   );

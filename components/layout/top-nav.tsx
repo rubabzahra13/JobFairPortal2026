@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BookOpen, FileText, LayoutDashboard, LogOut, Plus, QrCode, Zap } from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard, LogOut, Plus, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
+import { VectorLogo } from "@/components/brand/vector-logo";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -30,13 +31,10 @@ export function TopNav() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link href="/apply" className="flex shrink-0 items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-              <Zap className="h-4 w-4 text-primary-foreground" fill="currentColor" />
+            <div className="flex h-8 w-28 items-center justify-center rounded-md bg-primary px-2.5">
+              <VectorLogo className="h-5 max-w-full" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-semibold tracking-tight text-foreground">
-                VECTOR AI
-              </span>
               <span className="hidden text-xs text-muted-foreground sm:block">
                 Job Fair
               </span>
@@ -60,13 +58,10 @@ export function TopNav() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-            <Zap className="h-4 w-4 text-primary-foreground" fill="currentColor" />
+          <div className="flex h-8 w-28 items-center justify-center rounded-md bg-primary px-2.5">
+            <VectorLogo className="h-5 max-w-full" />
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              VECTOR AI
-            </span>
             <span className="hidden text-xs text-muted-foreground sm:block">
               Eval
             </span>

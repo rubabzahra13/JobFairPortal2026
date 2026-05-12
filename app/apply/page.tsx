@@ -1,11 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { AlertCircle, CheckCircle2, FileText, Loader2, Send, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ACADEMIC_BATCH_OPTIONS, DEGREE_GROUPS } from "@/lib/academic-options";
+import { VectorLogo } from "@/components/brand/vector-logo";
 
 type ApplyResponse = {
   candidate?: {
@@ -97,8 +98,8 @@ export default function ApplyPage() {
     <div className="mx-auto max-w-xl px-4 py-5 sm:px-6 sm:py-8">
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <div className="space-y-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary sm:h-12 sm:w-12">
-            <Zap className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" fill="currentColor" />
+          <div className="flex h-12 w-40 items-center justify-center rounded-xl bg-primary px-3 sm:h-14 sm:w-44">
+            <VectorLogo className="h-7 max-w-full" />
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-primary">

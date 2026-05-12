@@ -83,6 +83,26 @@ export async function saveCandidate(candidate: Candidate): Promise<Candidate> {
   return data.candidate;
 }
 
+export async function updateCandidateStatus(
+  id: string,
+  status: NonNullable<Candidate["status"]>
+): Promise<Candidate> {
+  const response = await fetch(`/api/candidates/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+  const data = await readJson(response);
+
+  if (!response.ok) throw apiError(data, "Failed to update candidate status");
+  if (!data.candidate) throw new Error("Candidate API returned no candidate");
+
+  return data.candidate;
+}
+
 export async function deleteCandidate(id: string): Promise<never> {
   throw new Error(`Deleting candidate ${id} is not supported by the shared backend yet.`);
 }

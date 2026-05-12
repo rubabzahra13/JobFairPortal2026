@@ -100,6 +100,36 @@ export function normalizeCandidateEvaluation(candidate: Candidate): Candidate {
   };
 }
 
+export function setEvaluatorScorecard(
+  scorecards: EvaluatorScorecards | undefined,
+  evaluatorId: PanelEvaluatorId,
+  scores: Scores | null,
+  notes: string,
+  updatedAt = new Date().toISOString()
+): EvaluatorScorecards {
+  const nextScorecards: EvaluatorScorecards = { ...scorecards };
+
+  if (!scores) {
+    delete nextScorecards[evaluatorId];
+    return nextScorecards;
+  }
+
+  nextScorecards[evaluatorId] = {
+    evaluatorId,
+    displayName: evaluatorDisplayName(evaluatorId),
+    scores: {
+      technicalDepth: normalizeScore(scores.technicalDepth),
+      personality: normalizeScore(scores.personality),
+      communication: normalizeScore(scores.communication),
+      khandaniPan: normalizeScore(scores.khandaniPan),
+    },
+    notes: notes.trim(),
+    updatedAt,
+  };
+
+  return normalizeEvaluatorScorecards(nextScorecards);
+}
+
 export function upsertEvaluatorScorecard(
   candidate: Candidate,
   evaluatorId: PanelEvaluatorId,
@@ -107,21 +137,13 @@ export function upsertEvaluatorScorecard(
   notes: string,
   updatedAt = new Date().toISOString()
 ): Candidate {
-  const nextScorecards: EvaluatorScorecards = {
-    ...candidate.evaluatorScorecards,
-    [evaluatorId]: {
-      evaluatorId,
-      displayName: evaluatorDisplayName(evaluatorId),
-      scores: {
-        technicalDepth: normalizeScore(scores.technicalDepth),
-        personality: normalizeScore(scores.personality),
-        communication: normalizeScore(scores.communication),
-        khandaniPan: normalizeScore(scores.khandaniPan),
-      },
-      notes: notes.trim(),
-      updatedAt,
-    },
-  };
+  const nextScorecards = setEvaluatorScorecard(
+    candidate.evaluatorScorecards,
+    evaluatorId,
+    scores,
+    notes,
+    updatedAt
+  );
 
   return normalizeCandidateEvaluation({
     ...candidate,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PANEL_EVALUATORS, type Candidate } from "./types";
 import {
+  CANDIDATE_STATUSES,
   CANDIDATE_SHEET_HEADERS,
   candidateToSheetRow,
   legacySheetRowToCandidate,
@@ -115,6 +116,17 @@ describe("candidate sheet mapping", () => {
 
   it("round trips intake, scoring, status, source, resume, and insight fields", () => {
     expect(sheetRowToCandidate(candidateToSheetRow(candidate))).toEqual(candidate);
+  });
+
+  it("keeps no-show candidates as an explicit status in sheet rows", () => {
+    const noShowCandidate: Candidate = {
+      ...candidate,
+      status: "no_show",
+    };
+
+    expect(CANDIDATE_STATUSES).toContain("no_show");
+    expect(candidateToSheetRow(noShowCandidate)[17]).toBe("no_show");
+    expect(sheetRowToCandidate(candidateToSheetRow(noShowCandidate)).status).toBe("no_show");
   });
 
   it("writes Gemini fields as readable sheet columns instead of JSON", () => {
