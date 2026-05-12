@@ -33,6 +33,7 @@ import {
   Clock,
   ExternalLink,
   Inbox,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/date-utils";
@@ -216,7 +217,7 @@ export default function SubmissionsPage() {
                           href={`/candidates/new?submission=${submission.id}`}
                           variant="default"
                           size="sm"
-                          className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
+                          className="h-8 min-w-[7.75rem] shrink-0 justify-center gap-1.5 px-2.5 text-xs shadow-sm"
                         >
                           <Play className="h-3.5 w-3.5 shrink-0" />
                           Evaluate
@@ -225,10 +226,11 @@ export default function SubmissionsPage() {
                       {submission.status === "evaluated" && submission.candidateId && (
                         <ButtonLink
                           href={`/candidates/${submission.candidateId}`}
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
+                          className="h-8 min-w-[7.75rem] shrink-0 justify-center gap-1.5 px-2.5 text-xs shadow-sm"
                         >
+                          <Eye className="h-3.5 w-3.5 shrink-0" />
                           Evaluation
                         </ButtonLink>
                       )}

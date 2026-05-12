@@ -26,8 +26,6 @@ import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import {
-  ChevronDown,
-  ChevronUp,
   Eye,
   Pencil,
   Search,
@@ -97,15 +95,6 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
       return sortDir === "asc" ? diff : -diff;
     });
 
-  function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return null;
-    return sortDir === "asc" ? (
-      <ChevronUp className="h-3 w-3" />
-    ) : (
-      <ChevronDown className="h-3 w-3" />
-    );
-  }
-
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -160,9 +149,7 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                 className="cursor-pointer select-none text-xs"
                 onClick={() => toggleSort("name")}
               >
-                <div className="flex items-center gap-1">
-                  Name <SortIcon k="name" />
-                </div>
+                Name
               </TableHead>
               <TableHead className="hidden text-xs sm:table-cell">
                 Degree / Batch
@@ -171,17 +158,13 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                 className="cursor-pointer select-none text-xs"
                 onClick={() => toggleSort("archetype")}
               >
-                <div className="flex items-center gap-1">
-                  Archetype <SortIcon k="archetype" />
-                </div>
+                Archetype
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none text-xs"
                 onClick={() => toggleSort("score")}
               >
-                <div className="flex items-center gap-1">
-                  Score <SortIcon k="score" />
-                </div>
+                Score
               </TableHead>
               <TableHead className="hidden text-xs md:table-cell">
                 Scores
@@ -190,9 +173,7 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                 className="hidden cursor-pointer select-none text-xs sm:table-cell"
                 onClick={() => toggleSort("createdAt")}
               >
-                <div className="flex items-center gap-1">
-                  Added <SortIcon k="createdAt" />
-                </div>
+                Added
               </TableHead>
               <TableHead className="w-[80px] text-right text-xs">
                 Actions
