@@ -7,14 +7,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const BATCH_OPTIONS = ["22", "23", "24"] as const;
-const DEGREE_OPTIONS = [
-  "BS Computer Science",
-  "BS Software Engineering",
-  "BS Artificial Intelligence",
-  "BS Data Science",
-  "BS Cyber Security",
-  "BS Electrical Engineering",
-  "Other / Not listed",
+const DEGREE_GROUPS = [
+  {
+    label: "Undergraduate Programs (Bachelor's)",
+    options: [
+      "Bachelor of Business Administration (BBA)",
+      "Bachelor of Science in Accounting and Finance",
+      "Bachelor of Science in Artificial Intelligence",
+      "Bachelor of Science in Business Analytics",
+      "Bachelor of Science in Computer Engineering",
+      "Bachelor of Science in Computer Science",
+      "Bachelor of Science in Cyber Security",
+      "Bachelor of Science in Data Science",
+      "Bachelor of Science in Electrical Engineering",
+      "Bachelor of Science in Financial Technology (FinTech)",
+      "Bachelor of Science in Software Engineering",
+    ],
+  },
+  {
+    label: "Graduate Programs (Master's)",
+    options: [
+      "Master of Business Administration (MBA)",
+      "Master of Science in Artificial Intelligence",
+      "Master of Science in Business Analytics",
+      "Master of Science in Computer Science",
+      "Master of Science in Cyber Security",
+      "Master of Science in Data Science",
+      "Master of Science in Electrical Engineering",
+      "Master of Science in Mathematics",
+      "Master of Science in Software Engineering",
+      "Master of Science in Software Project Management",
+    ],
+  },
+  {
+    label: "Postgraduate Programs (PhD)",
+    options: [
+      "Doctor of Philosophy in Computer Science",
+      "Doctor of Philosophy in Electrical Engineering",
+      "Doctor of Philosophy in Management Sciences",
+      "Doctor of Philosophy in Mathematics",
+      "Doctor of Philosophy in Software Engineering",
+    ],
+  },
 ] as const;
 
 type ApplyResponse = {
@@ -170,10 +204,14 @@ export default function ApplyPage() {
                 <option value="" disabled>
                   Select degree / major
                 </option>
-                {DEGREE_OPTIONS.map((degree) => (
-                  <option key={degree} value={degree}>
-                    {degree}
-                  </option>
+                {DEGREE_GROUPS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((degree) => (
+                      <option key={degree} value={degree}>
+                        {degree}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
