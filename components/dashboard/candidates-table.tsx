@@ -278,7 +278,7 @@ export function CandidatesTable({ candidates, onDelete }: CandidatesTableProps) 
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex items-center justify-end gap-1">
                         <ButtonLink
                           href={`/candidates/${candidate.id}`}
                           variant="ghost"

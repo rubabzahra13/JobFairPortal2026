@@ -79,7 +79,7 @@ export default function DashboardPage() {
           </div>
           <div className="bg-card p-4 flex items-center gap-3">
             <div className="flex-1 grid grid-cols-4 gap-1">
-              {archetypes.map(({ key, count, icon, color }) => (
+              {archetypes.map(({ key, count, label, color }) => (
                 <div key={key} className="text-center">
                   <div
                     className="h-8 rounded flex items-center justify-center text-xs font-bold text-white"
@@ -87,31 +87,11 @@ export default function DashboardPage() {
                   >
                     {count > 0 ? count : "—"}
                   </div>
-                  <p className="text-[9px] text-muted-foreground mt-1">{icon}</p>
+                  <p className="text-[9px] text-muted-foreground mt-1">{label.replace("The ", "")}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Archetype Pills */}
-      {!loading && total > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {archetypes.map(({ key, count, label, icon, color }) => (
-            <div
-              key={key}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                count > 0 ? "border-transparent" : "border-border text-muted-foreground"
-              )}
-              style={count > 0 ? { backgroundColor: `${color}20`, color } : undefined}
-            >
-              <span className="font-bold">{icon}</span>
-              <span>{label}</span>
-              <span className="tabular-nums">{count}</span>
-            </div>
-          ))}
         </div>
       )}
 
