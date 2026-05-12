@@ -18,6 +18,12 @@ import {
   evaluatorDisplayName,
   evaluatorDisplayNames,
 } from "@/lib/evaluator-scorecards";
+import {
+  ACADEMIC_BATCH_OPTIONS,
+  DEGREE_GROUPS,
+  isKnownAcademicBatch,
+  isKnownDegree,
+} from "@/lib/academic-options";
 import { generateId, saveCandidate } from "@/lib/store";
 import { getSubmissionById, updateSubmissionStatus, Submission } from "@/lib/submissions";
 import { ViewCvButton } from "@/components/submissions/view-cv-button";
@@ -45,7 +51,7 @@ const DEFAULT_SCORES: Scores = {
 
 function submissionDegree(submission: Submission | null): string {
   if (!submission?.degree) return "";
-  return `${submission.degree}${submission.university ? `, ${submission.university}` : ""}`;
+  return submission.degree;
 }
 
 function firstEvaluatorId(scorecards: EvaluatorScorecards | undefined): PanelEvaluatorId {
@@ -116,6 +122,8 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const scores = activeScorecard?.scores ?? baseScores;
   const evaluatorNotes = activeScorecard?.notes ?? "";
   const aggregateScores = aggregateEvaluatorScores(scorecards, baseScores);
+  const customDegree = degree && !isKnownDegree(degree) ? degree : "";
+  const customBatch = batch && !isKnownAcademicBatch(batch) ? batch : "";
   const submittedEvaluatorCount = PANEL_EVALUATORS.filter(
     (evaluator) => scorecards[evaluator.id]?.updatedAt
   ).length;
@@ -295,11 +303,41 @@ export function CandidateForm({ initial }: CandidateFormProps) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="degree" className="text-xs">Degree & Major</Label>
-            <Input id="degree" value={degree} onChange={(e) => setDegree(e.target.value)} className="h-9 bg-card text-sm" />
+            <select
+              id="degree"
+              value={degree}
+              onChange={(e) => setDegree(e.target.value)}
+              className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+            >
+              <option value="">Select degree / major</option>
+              {customDegree && <option value={customDegree}>{customDegree}</option>}
+              {DEGREE_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="batch" className="text-xs">Batch / Year</Label>
-            <Input id="batch" value={batch} onChange={(e) => setBatch(e.target.value)} className="h-9 bg-card text-sm" />
+            <select
+              id="batch"
+              value={batch}
+              onChange={(e) => setBatch(e.target.value)}
+              className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+            >
+              <option value="">Select batch</option>
+              {customBatch && <option value={customBatch}>{customBatch}</option>}
+              {ACADEMIC_BATCH_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="experience" className="text-xs">Experience</Label>
