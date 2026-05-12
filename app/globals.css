@@ -1,26 +1,126 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: oklch(0.09 0.005 264);
+  --color-foreground: oklch(0.97 0 0);
+  --color-card: oklch(0.12 0.005 264);
+  --color-card-foreground: oklch(0.97 0 0);
+  --color-popover: oklch(0.12 0.005 264);
+  --color-popover-foreground: oklch(0.97 0 0);
+  --color-primary: oklch(0.62 0.21 255);
+  --color-primary-foreground: oklch(0.97 0 0);
+  --color-secondary: oklch(0.17 0.007 264);
+  --color-secondary-foreground: oklch(0.97 0 0);
+  --color-muted: oklch(0.17 0.007 264);
+  --color-muted-foreground: oklch(0.56 0.01 264);
+  --color-accent: oklch(0.17 0.007 264);
+  --color-accent-foreground: oklch(0.97 0 0);
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-destructive-foreground: oklch(0.97 0 0);
+  --color-border: oklch(0.22 0.007 264);
+  --color-input: oklch(0.17 0.007 264);
+  --color-ring: oklch(0.62 0.21 255);
+  --radius: 0.5rem;
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  /* Archetype colors */
+  --color-astronaut: oklch(0.78 0.17 65);
+  --color-astronaut-bg: oklch(0.22 0.06 65);
+  --color-pilot: oklch(0.62 0.21 255);
+  --color-pilot-bg: oklch(0.18 0.07 255);
+  --color-bus-driver: oklch(0.65 0.01 264);
+  --color-bus-driver-bg: oklch(0.19 0.005 264);
+  --color-taxi-rider: oklch(0.55 0.2 25);
+  --color-taxi-rider-bg: oklch(0.2 0.06 25);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--color-border);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.28 0.007 264);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.38 0.007 264);
+}
+
+/* Score slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  margin-top: -6px;
+  border: 2px solid oklch(0.09 0.005 264);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+}
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px oklch(0.62 0.21 255 / 0.25);
+}
+
+/* Animated gradient border for priority cards */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-border-astronaut {
+  position: relative;
+}
+.gradient-border-astronaut::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, oklch(0.78 0.17 65), oklch(0.85 0.15 80), oklch(0.78 0.17 65));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
