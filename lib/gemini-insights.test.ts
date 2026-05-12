@@ -88,4 +88,37 @@ describe("gemini insight helpers", () => {
       locationFit: "",
     });
   });
+
+  it("extracts a JSON object when Gemini wraps it in prose", () => {
+    const insight = JSON.parse(
+      normalizeGeminiInsightText(
+        'Here is the JSON: {"summary":"ok","suggestedScores":{"technicalDepth":6,"personality":8,"communication":7,"khandaniPan":8},"scoreReasons":{},"interviewPrompts":[],"risks":[],"locationFit":"Islamabad fit."}'
+      )
+    );
+
+    expect(insight.suggestedScores.personality).toBe(8);
+    expect(insight.locationFit).toBe("Islamabad fit.");
+  });
+
+  it("parses JSON when the model returns it as an encoded string", () => {
+    const encoded = JSON.stringify(
+      JSON.stringify({
+        summary: "ok",
+        suggestedScores: {
+          technicalDepth: 6,
+          personality: 8,
+          communication: 7,
+          khandaniPan: 8,
+        },
+        scoreReasons: {},
+        interviewPrompts: [],
+        risks: [],
+        locationFit: "Islamabad fit.",
+      })
+    );
+
+    const insight = JSON.parse(normalizeGeminiInsightText(encoded));
+
+    expect(insight.suggestedScores.communication).toBe(7);
+  });
 });
