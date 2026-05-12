@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, FileText, GraduationCap, MapPin, Pencil, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, formatTime } from "@/lib/date-utils";
+import { parseCandidateGeminiInsight } from "@/lib/candidate-record";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,15 +27,6 @@ type CandidateInsight = {
   risks?: string[];
   locationFit?: string;
 };
-
-function parseCandidateInsight(value: string | undefined): CandidateInsight | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as CandidateInsight;
-  } catch {
-    return { summary: value };
-  }
-}
 
 export default function CandidateDetailPage({ params }: PageProps) {
   const { id } = use(params);
@@ -97,7 +89,7 @@ export default function CandidateDetailPage({ params }: PageProps) {
     (candidate.sourceSubmissionId ? getSubmissionById(candidate.sourceSubmissionId) : undefined) ??
     getSubmissionByCandidateId(candidate.id);
   const cvSubmissionId = submissionForCv?.id;
-  const geminiInsight = parseCandidateInsight(candidate.geminiInsight);
+  const geminiInsight = parseCandidateGeminiInsight(candidate.geminiInsight) as CandidateInsight | null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">

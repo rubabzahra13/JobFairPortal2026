@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BookOpen, FileText, LayoutDashboard, LogIn, LogOut, Plus, QrCode, Zap } from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard, LogOut, Plus, QrCode, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 
@@ -42,24 +42,14 @@ export function TopNav() {
               </span>
             </div>
           </Link>
-          <ButtonLink
-            href={pathname === "/login" ? "/apply" : "/login"}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-          >
-            {pathname === "/login" ? (
+          {pathname === "/login" ? (
+            <ButtonLink href="/apply" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
               <>
                 <QrCode className="h-3.5 w-3.5" />
                 Candidate Form
               </>
-            ) : (
-              <>
-                <LogIn className="h-3.5 w-3.5" />
-                Panel Login
-              </>
-            )}
-          </ButtonLink>
+            </ButtonLink>
+          ) : null}
         </div>
       </header>
     );
