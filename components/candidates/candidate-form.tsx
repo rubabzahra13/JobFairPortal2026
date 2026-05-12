@@ -1,8 +1,23 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Candidate, Archetype, SCORE_DIMENSIONS, calcTotalScore, ARCHETYPE_META } from "@/lib/types";
+import {
+  ARCHETYPE_META,
+  Candidate,
+  Archetype,
+  PANEL_EVALUATORS,
+  SCORE_DIMENSIONS,
+  calcTotalScore,
+  type EvaluatorScorecards,
+  type PanelEvaluatorId,
+  type Scores,
+} from "@/lib/types";
+import {
+  aggregateEvaluatorScores,
+  evaluatorDisplayName,
+  evaluatorDisplayNames,
+} from "@/lib/evaluator-scorecards";
 import { generateId, saveCandidate } from "@/lib/store";
 import { getSubmissionById, updateSubmissionStatus, Submission } from "@/lib/submissions";
 import { ViewCvButton } from "@/components/submissions/view-cv-button";
@@ -21,9 +36,23 @@ interface CandidateFormProps {
   initial?: Candidate;
 }
 
+const DEFAULT_SCORES: Scores = {
+  technicalDepth: 5,
+  personality: 5,
+  communication: 5,
+  khandaniPan: 5,
+};
+
 function submissionDegree(submission: Submission | null): string {
   if (!submission?.degree) return "";
   return `${submission.degree}${submission.university ? `, ${submission.university}` : ""}`;
+}
+
+function firstEvaluatorId(scorecards: EvaluatorScorecards | undefined): PanelEvaluatorId {
+  return (
+    PANEL_EVALUATORS.find((evaluator) => scorecards?.[evaluator.id]?.updatedAt)?.id ??
+    PANEL_EVALUATORS[0].id
+  );
 }
 
 export function CandidateForm({ initial }: CandidateFormProps) {
@@ -42,7 +71,6 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const [email, setEmail] = useState(initial?.email ?? submission?.email ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? submission?.phone ?? "");
   const [hometown, setHometown] = useState(initial?.hometown ?? submission?.hometown ?? "");
-  const [currentCity, setCurrentCity] = useState(initial?.currentCity ?? "");
   const [graduationLocationPlan, setGraduationLocationPlan] = useState(
     initial?.graduationLocationPlan ?? ""
   );
@@ -51,26 +79,67 @@ export function CandidateForm({ initial }: CandidateFormProps) {
   const [yearsOfExperience, setYearsOfExperience] = useState(
     initial?.yearsOfExperience ?? submission?.experience ?? ""
   );
-  const [evaluators, setEvaluators] = useState(
-    initial?.evaluators ?? (submission ? "Pre-filled" : "")
-  );
-  const [notes, setNotes] = useState(initial?.notes ?? submission?.personalitySummary ?? "");
   const [archetype, setArchetype] = useState<Archetype>(
     initial?.archetype ?? submission?.suggestedArchetype ?? "pilot"
   );
+  const [activeEvaluatorId, setActiveEvaluatorId] = useState<PanelEvaluatorId>(() =>
+    firstEvaluatorId(initial?.evaluatorScorecards)
+  );
+  const [scorecards, setScorecards] = useState<EvaluatorScorecards>(
+    initial?.evaluatorScorecards ?? {}
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scores, setScores] = useState({
-    technicalDepth: initial?.scores.technicalDepth ?? submission?.suggestedScores?.technicalDepth ?? 5,
-    personality: initial?.scores.personality ?? submission?.suggestedScores?.personality ?? 5,
-    communication: initial?.scores.communication ?? submission?.suggestedScores?.communication ?? 5,
-    khandaniPan: initial?.scores.khandaniPan ?? submission?.suggestedScores?.khandaniPan ?? 5,
-  });
 
-  const totalScore = calcTotalScore(scores);
+  const baseScores: Scores = useMemo(
+    () => ({
+      technicalDepth:
+        initial?.scores.technicalDepth ??
+        submission?.suggestedScores?.technicalDepth ??
+        DEFAULT_SCORES.technicalDepth,
+      personality:
+        initial?.scores.personality ??
+        submission?.suggestedScores?.personality ??
+        DEFAULT_SCORES.personality,
+      communication:
+        initial?.scores.communication ??
+        submission?.suggestedScores?.communication ??
+        DEFAULT_SCORES.communication,
+      khandaniPan:
+        initial?.scores.khandaniPan ??
+        submission?.suggestedScores?.khandaniPan ??
+        DEFAULT_SCORES.khandaniPan,
+    }),
+    [initial?.scores, submission?.suggestedScores]
+  );
+  const activeScorecard = scorecards[activeEvaluatorId];
+  const scores = activeScorecard?.scores ?? baseScores;
+  const evaluatorNotes = activeScorecard?.notes ?? "";
+  const aggregateScores = aggregateEvaluatorScores(scorecards, baseScores);
+  const submittedEvaluatorCount = PANEL_EVALUATORS.filter(
+    (evaluator) => scorecards[evaluator.id]?.updatedAt
+  ).length;
+  const totalScore = calcTotalScore(aggregateScores);
 
-  function setScore(key: keyof typeof scores, val: number) {
-    setScores((prev) => ({ ...prev, [key]: val }));
+  function updateActiveScorecard(nextScores: Scores, nextNotes = evaluatorNotes) {
+    setScorecards((prev) => ({
+      ...prev,
+      [activeEvaluatorId]: {
+        evaluatorId: activeEvaluatorId,
+        displayName: evaluatorDisplayName(activeEvaluatorId),
+        scores: nextScores,
+        notes: nextNotes,
+        updatedAt: prev[activeEvaluatorId]?.updatedAt ?? new Date().toISOString(),
+      },
+    }));
+  }
+
+  function setScore(key: keyof Scores, val: number) {
+    updateActiveScorecard({ ...scores, [key]: val });
+  }
+
+  function setEvaluatorNotes(notes: string) {
+    updateActiveScorecard(scores, notes);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -84,8 +153,18 @@ export function CandidateForm({ initial }: CandidateFormProps) {
 
     setSaving(true);
     const candidateId = initial?.id ?? generateId();
-    const evaluatorsTrimmed = evaluators.trim();
-    const evaluatorsFinal = evaluatorsTrimmed === "Pre-filled" ? "" : evaluatorsTrimmed;
+    const now = new Date().toISOString();
+    const nextScorecards: EvaluatorScorecards = {
+      ...scorecards,
+      [activeEvaluatorId]: {
+        evaluatorId: activeEvaluatorId,
+        displayName: evaluatorDisplayName(activeEvaluatorId),
+        scores,
+        notes: evaluatorNotes.trim(),
+        updatedAt: scorecards[activeEvaluatorId]?.updatedAt ?? now,
+      },
+    };
+    const nextAggregateScores = aggregateEvaluatorScores(nextScorecards, baseScores);
 
     const candidate: Candidate = {
       ...initial,
@@ -94,19 +173,20 @@ export function CandidateForm({ initial }: CandidateFormProps) {
       email: email.trim(),
       phone: phone.trim(),
       hometown: hometown.trim(),
-      currentCity: currentCity.trim(),
+      currentCity: initial?.currentCity ?? "",
       graduationLocationPlan: graduationLocationPlan.trim(),
       degree: degree.trim(),
       batch: batch.trim(),
       yearsOfExperience: yearsOfExperience.trim(),
-      evaluators: evaluatorsFinal,
-      notes: notes.trim(),
+      evaluators: evaluatorDisplayNames(nextScorecards),
+      notes: initial?.notes ?? "",
       archetype,
-      scores,
+      scores: nextAggregateScores,
+      evaluatorScorecards: nextScorecards,
       status: initial?.status ?? "screening",
       source: initial?.source ?? "panel",
       sourceSubmissionId: submissionId ?? initial?.sourceSubmissionId,
-      createdAt: initial?.createdAt ?? new Date().toISOString(),
+      createdAt: initial?.createdAt ?? now,
     };
 
     try {
@@ -140,14 +220,14 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               {isEdit ? "Edit Candidate" : "Score New Candidate"}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {submission ? `From CV: ${submission.cvFileName}` : "Fill in scores while impression is fresh"}
+              {submission ? `From CV: ${submission.cvFileName}` : "Select evaluator tab, score, then save"}
             </p>
           </div>
         </div>
         <div className="hidden items-center gap-2 sm:flex">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Avg Score
+              Aggregate
             </p>
             <p className={cn("text-2xl font-bold tabular-nums", totalColor)}>
               {totalScore}
@@ -202,102 +282,34 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs">
-              Full Name
-            </Label>
-            <Input
-              id="name"
-              placeholder="e.g. Ali Hassan"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="name" className="text-xs">Full Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="email" className="text-xs">Email</Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="phone" className="text-xs">
-              Phone
-            </Label>
-            <Input
-              id="phone"
-              placeholder="+92..."
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="phone" className="text-xs">Phone</Label>
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="degree" className="text-xs">
-              Degree & Major
-            </Label>
-            <Input
-              id="degree"
-              placeholder="e.g. CS, FAST NUCES"
-              value={degree}
-              onChange={(e) => setDegree(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="degree" className="text-xs">Degree & Major</Label>
+            <Input id="degree" value={degree} onChange={(e) => setDegree(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="batch" className="text-xs">
-              Batch / Year
-            </Label>
-            <Input
-              id="batch"
-              placeholder="e.g. 2026, 8th Semester"
-              value={batch}
-              onChange={(e) => setBatch(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="batch" className="text-xs">Batch / Year</Label>
+            <Input id="batch" value={batch} onChange={(e) => setBatch(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="experience" className="text-xs">
-              Experience
-            </Label>
-            <Input
-              id="experience"
-              placeholder="e.g. 0 years, 1 internship"
-              value={yearsOfExperience}
-              onChange={(e) => setYearsOfExperience(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Label htmlFor="experience" className="text-xs">Experience</Label>
+            <Input id="experience" value={yearsOfExperience} onChange={(e) => setYearsOfExperience(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="hometown" className="text-xs">
               Hometown <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="hometown"
-              required
-              placeholder="e.g. Lahore"
-              value={hometown}
-              onChange={(e) => setHometown(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="currentCity" className="text-xs">
-              Current City
-            </Label>
-            <Input
-              id="currentCity"
-              placeholder="e.g. Islamabad"
-              value={currentCity}
-              onChange={(e) => setCurrentCity(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
+            <Input id="hometown" required value={hometown} onChange={(e) => setHometown(e.target.value)} className="h-9 bg-card text-sm" />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="graduationLocationPlan" className="text-xs">
@@ -312,27 +324,53 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               className="min-h-20 resize-none bg-card text-sm"
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="evaluators" className="text-xs">
-              Evaluators
-            </Label>
-            <Input
-              id="evaluators"
-              placeholder="e.g. Usman, Sarah"
-              value={evaluators}
-              onChange={(e) => setEvaluators(e.target.value)}
-              className="h-9 bg-card text-sm"
-            />
-          </div>
         </div>
       </section>
 
       <Separator />
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          The Four Dimensions
-        </h2>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Evaluator Scorecards
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Select your name before scoring. Aggregate uses submitted tabs only.
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {submittedEvaluatorCount} of {PANEL_EVALUATORS.length} submitted
+            </div>
+          </div>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+            {PANEL_EVALUATORS.map((evaluator) => {
+              const isActive = activeEvaluatorId === evaluator.id;
+              const hasSubmitted = Boolean(scorecards[evaluator.id]?.updatedAt);
+
+              return (
+                <button
+                  key={evaluator.id}
+                  type="button"
+                  onClick={() => setActiveEvaluatorId(evaluator.id)}
+                  className={cn(
+                    "shrink-0 rounded-lg border px-3 py-2 text-left text-xs transition-colors",
+                    isActive
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <span className="block font-semibold">{evaluator.displayName}</span>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {hasSubmitted ? "Score saved" : "Not scored"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="space-y-3">
           {SCORE_DIMENSIONS.map((dim) => (
             <ScoreSlider
@@ -347,6 +385,13 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             />
           ))}
         </div>
+
+        <Textarea
+          placeholder={`Notes from ${evaluatorDisplayName(activeEvaluatorId)}...`}
+          value={evaluatorNotes}
+          onChange={(e) => setEvaluatorNotes(e.target.value)}
+          className="min-h-24 resize-none bg-card text-sm"
+        />
       </section>
 
       <Separator />
@@ -375,23 +420,9 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         <ArchetypePicker value={archetype} onChange={setArchetype} />
       </section>
 
-      <Separator />
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Notes
-        </h2>
-        <Textarea
-          placeholder="Key impressions, standout moments, red flags, anything worth capturing while fresh..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="min-h-24 resize-none bg-card text-sm"
-        />
-      </section>
-
       <div className="flex items-center justify-between border-t border-border pt-6">
         <div className="flex items-center gap-3 sm:hidden">
-          <p className="text-xs text-muted-foreground">Avg</p>
+          <p className="text-xs text-muted-foreground">Aggregate</p>
           <p className={cn("text-xl font-bold tabular-nums", totalColor)}>
             {totalScore}/10
           </p>
@@ -402,7 +433,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
           </ButtonLink>
           <Button type="submit" size="sm" className="gap-2" disabled={saving}>
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? "Saving..." : isEdit ? "Save Changes" : "Save Candidate"}
+            {saving ? "Saving..." : isEdit ? "Save Evaluation" : "Save Candidate"}
           </Button>
         </div>
       </div>

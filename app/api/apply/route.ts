@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadResumeToDrive } from "@/lib/google-drive";
 import { upsertCandidate } from "@/lib/google-sheets";
 import { generateCandidateInsight } from "@/lib/gemini-insights";
 import { saveResumeLocally } from "@/lib/local-resume-storage";
@@ -29,13 +28,11 @@ export async function POST(request: NextRequest) {
   const degree = formValue(formData, "degree");
   const batch = formValue(formData, "batch");
   const hometown = formValue(formData, "hometown");
-  const graduationLocationPlan = formValue(formData, "graduationLocationPlan");
 
-  if (!name || !email || !phone || !degree || !batch || !hometown || !graduationLocationPlan) {
+  if (!name || !email || !phone || !degree || !batch || !hometown) {
     return NextResponse.json(
       {
-        error:
-          "name, email, phone, degree, batch, hometown, and graduationLocationPlan are required",
+        error: "name, email, phone, degree, batch, and hometown are required",
       },
       { status: 400 }
     );
@@ -59,20 +56,12 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const uploaded = await uploadResumeToDrive(file, candidateId);
+      const uploaded = await saveResumeLocally(file, candidateId);
       resumeFileName = uploaded.fileName;
       resumeUrl = uploaded.url;
-    } catch (error) {
-      warnings.push(warningMessage("Resume upload failed", error));
-      try {
-        const uploaded = await saveResumeLocally(file, candidateId);
-        resumeFileName = uploaded.fileName;
-        resumeUrl = uploaded.url;
-        warnings.push("Resume saved to local backend storage instead of Google Drive.");
-      } catch (localError) {
-        resumeFileName = file.name;
-        warnings.push(warningMessage("Local resume fallback failed", localError));
-      }
+    } catch (localError) {
+      resumeFileName = file.name;
+      warnings.push(warningMessage("Resume save failed", localError));
     }
   }
 
@@ -84,8 +73,8 @@ export async function POST(request: NextRequest) {
     degree,
     batch,
     hometown,
-    currentCity: formValue(formData, "currentCity"),
-    graduationLocationPlan,
+    currentCity: "",
+    graduationLocationPlan: "",
     yearsOfExperience: "",
     scores: DEFAULT_SCORES,
     archetype: "pilot",

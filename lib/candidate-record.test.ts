@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Candidate } from "./types";
+import { PANEL_EVALUATORS, type Candidate } from "./types";
 import {
   CANDIDATE_SHEET_HEADERS,
   candidateToSheetRow,
@@ -72,10 +72,10 @@ describe("candidate sheet mapping", () => {
       "Degree / Major",
       "Batch / Graduation Year",
       "Experience",
-      "Panel Technical Score",
-      "Panel Personality Score",
-      "Panel Communication Score",
-      "Panel Khandani Pan Score",
+      "Aggregate Technical Score",
+      "Aggregate Personality Score",
+      "Aggregate Communication Score",
+      "Aggregate Khandani Pan Score",
       "Archetype",
       "Evaluators",
       "Panel Notes",
@@ -100,6 +100,16 @@ describe("candidate sheet mapping", () => {
       "Source Submission ID",
       "Created At",
       "Updated At",
+      "Evaluator Count",
+      "Submitted Evaluators",
+      ...PANEL_EVALUATORS.flatMap((evaluator) => [
+        `${evaluator.displayName} Technical`,
+        `${evaluator.displayName} Personality`,
+        `${evaluator.displayName} Communication`,
+        `${evaluator.displayName} Khandani Pan`,
+        `${evaluator.displayName} Notes`,
+        `${evaluator.displayName} Updated At`,
+      ]),
     ]);
   });
 
@@ -116,6 +126,45 @@ describe("candidate sheet mapping", () => {
       "What did you build?\nWhy VECTOR?\nWhere will you be after graduation?"
     );
     expect(row.some((cell) => cell.includes("\"suggestedScores\""))).toBe(false);
+  });
+
+  it("writes per-evaluator scorecards and aggregate scores to the sheet", () => {
+    const row = candidateToSheetRow({
+      ...candidate,
+      evaluatorScorecards: {
+        ibrahim: {
+          evaluatorId: "ibrahim",
+          displayName: "Ibrahim Basit",
+          scores: { technicalDepth: 8, personality: 9, communication: 7, khandaniPan: 8 },
+          notes: "Strong ownership.",
+          updatedAt: "2026-05-12T15:00:00.000Z",
+        },
+        rubab: {
+          evaluatorId: "rubab",
+          displayName: "Rubab",
+          scores: { technicalDepth: 6, personality: 7, communication: 9, khandaniPan: 7 },
+          notes: "Clear communicator.",
+          updatedAt: "2026-05-12T15:05:00.000Z",
+        },
+      },
+    });
+    const parsed = sheetRowToCandidate(row);
+
+    expect(row[10]).toBe("7");
+    expect(row[11]).toBe("8");
+    expect(row[38]).toBe("2");
+    expect(row[39]).toBe("Ibrahim Basit, Rubab");
+    expect(row[40]).toBe("8");
+    expect(row[44]).toBe("Strong ownership.");
+    expect(row[52]).toBe("6");
+    expect(row[56]).toBe("Clear communicator.");
+    expect(parsed.scores).toEqual({
+      technicalDepth: 7,
+      personality: 8,
+      communication: 8,
+      khandaniPan: 8,
+    });
+    expect(parsed.evaluatorScorecards?.rubab?.scores.communication).toBe(9);
   });
 
   it("can parse old raw Gemini JSON rows for migration", () => {
