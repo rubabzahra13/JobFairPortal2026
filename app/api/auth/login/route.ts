@@ -3,6 +3,7 @@ import {
   PANEL_SESSION_COOKIE,
   PANEL_SESSION_MAX_AGE_SECONDS,
   findPanelUser,
+  shouldUseSecurePanelCookie,
   signSession,
 } from "@/lib/panel-auth";
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   response.cookies.set(PANEL_SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecurePanelCookie(request),
     maxAge: PANEL_SESSION_MAX_AGE_SECONDS,
     path: "/",
   });
