@@ -1,6 +1,7 @@
-import { Candidate } from "@/lib/types";
+"use client";
+
+import { Candidate, calcTotalScore } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Rocket, Navigation, Bus, Car, Users } from "lucide-react";
 
 interface StatsCardsProps {
   candidates: Candidate[];
@@ -21,88 +22,71 @@ export function StatsCards({ candidates }: StatsCardsProps) {
   const avgScore =
     total > 0
       ? Math.round(
-          candidates.reduce((sum, c) => {
-            const avg =
-              (c.scores.technicalDepth +
-                c.scores.personality +
-                c.scores.communication +
-                c.scores.khandaniPan) /
-              4;
-            return sum + avg;
-          }, 0) / total
+          candidates.reduce((sum, c) => sum + calcTotalScore(c.scores), 0) / total
         )
       : 0;
 
   const stats = [
     {
-      label: "Total Evaluated",
+      label: "Total",
       value: total,
       sub: `${todayCount} today`,
-      icon: Users,
-      iconColor: "text-muted-foreground",
-      iconBg: "bg-secondary",
+      color: "text-foreground",
     },
     {
-      label: "Astronauts",
+      label: "Astronaut",
       value: astronauts,
-      sub: total > 0 ? `${Math.round((astronauts / total) * 100)}% of pool` : "—",
-      icon: Rocket,
-      iconColor: "text-[oklch(0.78_0.17_65)]",
-      iconBg: "bg-[oklch(0.22_0.06_65)]",
+      icon: "A",
+      iconBg: "bg-[oklch(0.78_0.17_65)]",
+      color: "text-[oklch(0.78_0.17_65)]",
     },
     {
-      label: "Pilots",
+      label: "Pilot",
       value: pilots,
-      sub: total > 0 ? `${Math.round((pilots / total) * 100)}% of pool` : "—",
-      icon: Navigation,
-      iconColor: "text-[oklch(0.62_0.21_255)]",
-      iconBg: "bg-[oklch(0.18_0.07_255)]",
+      icon: "P",
+      iconBg: "bg-[oklch(0.62_0.21_255)]",
+      color: "text-[oklch(0.62_0.21_255)]",
+    },
+    {
+      label: "Bus Driver",
+      value: busDrivers,
+      icon: "B",
+      iconBg: "bg-[oklch(0.5_0.01_264)]",
+      color: "text-[oklch(0.5_0.01_264)]",
+    },
+    {
+      label: "Taxi Rider",
+      value: taxiRiders,
+      icon: "T",
+      iconBg: "bg-[oklch(0.55_0.2_25)]",
+      color: "text-[oklch(0.55_0.2_25)]",
     },
     {
       label: "Avg Score",
       value: avgScore || "—",
-      sub: total > 0 ? `across ${total} candidate${total !== 1 ? "s" : ""}` : "no data yet",
-      icon: null,
-      iconColor: "",
-      iconBg: "",
-      isScore: true,
-      score: avgScore,
+      sub: "/10",
+      color: avgScore >= 8 ? "text-emerald-400" : avgScore >= 5 ? "text-amber-400" : avgScore > 0 ? "text-red-400" : "text-muted-foreground",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {stats.map(({ label, value, sub, icon: Icon, iconColor, iconBg, isScore, score }) => (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      {stats.map(({ label, value, sub, icon, iconBg, color }) => (
         <div
           key={label}
-          className="rounded-lg border border-border bg-card p-4 space-y-3"
+          className="rounded-lg border border-border bg-card p-3"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-              {label}
-            </p>
-            {Icon && (
-              <div className={cn("flex h-7 w-7 items-center justify-center rounded-md", iconBg)}>
-                <Icon className={cn("h-3.5 w-3.5", iconColor)} />
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {icon && (
+              <div className={cn("flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold text-white", iconBg)}>
+                {icon}
               </div>
             )}
+            <span className="text-[10px] text-muted-foreground truncate">{label}</span>
           </div>
-          <div>
-            <p
-              className={cn(
-                "text-2xl font-bold tabular-nums",
-                isScore && score >= 8
-                  ? "text-emerald-400"
-                  : isScore && score >= 5
-                  ? "text-amber-400"
-                  : isScore && score > 0
-                  ? "text-red-400"
-                  : "text-foreground"
-              )}
-            >
-              {value}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
+          <div className="flex items-baseline gap-0.5">
+            <span className={cn("text-xl font-bold tabular-nums", color)}>{value}</span>
+            {sub && <span className="text-[10px] text-muted-foreground">{sub}</span>}
           </div>
         </div>
       ))}

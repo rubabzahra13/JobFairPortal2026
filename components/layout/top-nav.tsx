@@ -52,11 +52,17 @@ export function TopNav() {
           ))}
         </nav>
 
-        {/* CTA */}
-        <ButtonLink href="/candidates/new" size="sm" className="h-8 gap-1.5 text-xs">
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Candidate</span>
-        </ButtonLink>
+        {/* CTAs */}
+        <div className="flex items-center gap-2">
+          <ButtonLink href="/submissions" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Review CVs</span>
+          </ButtonLink>
+          <ButtonLink href="/candidates/new" size="sm" className="h-8 gap-1.5 text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Candidate</span>
+          </ButtonLink>
+        </div>
       </div>
     </header>
   );

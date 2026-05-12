@@ -92,10 +92,6 @@ export default function SubmissionsPage() {
           <p className="text-sm text-muted-foreground mt-1 max-w-xs">
             Share the QR code upload link with candidates. Their CVs will appear here.
           </p>
-          <ButtonLink href="/upload" variant="outline" className="mt-6 gap-2">
-            <ExternalLink className="h-4 w-4" />
-            View Upload Page
-          </ButtonLink>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
