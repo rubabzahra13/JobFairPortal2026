@@ -22,6 +22,7 @@ export async function uploadResumeToDrive(
   const fileName = `${candidateId}-${safeName}`.replace(/[^\w.\- ]+/g, "_");
 
   const response = await drive.files.create({
+    supportsAllDrives: true,
     requestBody: {
       name: fileName,
       parents: [getFolderId()],
