@@ -9,6 +9,7 @@ describe("proxy public path classification", () => {
     expect(isPublicPath("/api/auth/login")).toBe(true);
     expect(isPublicPath("/api/auth/session")).toBe(true);
     expect(isPublicPath("/api/apply")).toBe(true);
+    expect(isPublicPath("/uploads/resumes/cand_1.pdf")).toBe(true);
     expect(isPublicPath("/_next/static/chunk.js")).toBe(true);
     expect(isPublicPath("/favicon.ico")).toBe(true);
     expect(isPublicPath("/file.svg")).toBe(true);
