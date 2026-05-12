@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   findPanelUser,
   parsePanelCredentials,
+  shouldUseSecurePanelCookie,
   signSession,
   verifySession,
 } from "./panel-auth";
@@ -63,5 +64,29 @@ describe("panel auth", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("does not mark cookies secure for direct HTTP EC2 requests", () => {
+    expect(
+      shouldUseSecurePanelCookie({
+        headers: new Headers(),
+        nextUrl: { protocol: "http:" },
+      })
+    ).toBe(false);
+  });
+
+  it("marks cookies secure when the request or proxy protocol is HTTPS", () => {
+    expect(
+      shouldUseSecurePanelCookie({
+        headers: new Headers(),
+        nextUrl: { protocol: "https:" },
+      })
+    ).toBe(true);
+    expect(
+      shouldUseSecurePanelCookie({
+        headers: new Headers({ "x-forwarded-proto": "https" }),
+        nextUrl: { protocol: "http:" },
+      })
+    ).toBe(true);
   });
 });

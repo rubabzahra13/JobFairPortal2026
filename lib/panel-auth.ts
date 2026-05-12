@@ -10,6 +10,13 @@ export type PanelUser = PanelSession & {
   password: string;
 };
 
+type CookieSecurityRequest = {
+  headers?: Pick<Headers, "get">;
+  nextUrl?: {
+    protocol?: string;
+  };
+};
+
 type SignedPanelSession = PanelSession & {
   issuedAt: number;
   expiresAt: number;
@@ -109,6 +116,21 @@ export function findPanelUser(
   if (!user || !constantTimeEqual(user.password, password)) return null;
 
   return user;
+}
+
+export function shouldUseSecurePanelCookie(request?: CookieSecurityRequest): boolean {
+  const forwardedProto = request?.headers
+    ?.get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  const requestProtocol = request?.nextUrl?.protocol?.replace(/:$/, "").toLowerCase();
+  const protocol = forwardedProto || requestProtocol;
+
+  if (protocol === "https") return true;
+  if (protocol === "http") return false;
+
+  return process.env.NODE_ENV === "production";
 }
 
 export async function signSession(
