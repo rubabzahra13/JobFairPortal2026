@@ -11,6 +11,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/auth/login",
   "/api/auth/session",
   "/api/apply",
+  "/uploads/resumes",
   "/_next",
 ];
 
