@@ -1,4 +1,8 @@
 import { deleteStoredCvPdf } from "./cv-storage";
+import type { Archetype, Scores } from "./types";
+
+/** CV-only AI rationale per score dimension (optional). */
+export type SuggestedScoreReasons = Partial<Record<keyof Scores, string>>;
 
 export interface Submission {
   id: string;
@@ -12,6 +16,13 @@ export interface Submission {
   experience: string;
   skills: string;
   hometown: string;
+  // LLM suggestions from CV (QR upload) — evaluators must confirm
+  suggestedArchetype?: Archetype;
+  suggestedScores?: Scores;
+  suggestedScoreReasons?: SuggestedScoreReasons;
+  evaluationSuggestionNote?: string;
+  /** 2-3 line personality read from CV for notes section */
+  personalitySummary?: string;
   // CV data
   cvText: string;
   cvFileName: string;

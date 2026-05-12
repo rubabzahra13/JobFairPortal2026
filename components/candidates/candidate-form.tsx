@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Candidate, Archetype, SCORE_DIMENSIONS, calcTotalScore } from "@/lib/types";
+import { Candidate, Archetype, SCORE_DIMENSIONS, calcTotalScore, ARCHETYPE_META } from "@/lib/types";
 import { saveCandidate, generateId } from "@/lib/store";
 import { getSubmissionById, updateSubmissionStatus, Submission } from "@/lib/submissions";
 import { ViewCvButton } from "@/components/submissions/view-cv-button";
@@ -56,9 +56,14 @@ export function CandidateForm({ initial }: CandidateFormProps) {
         setYearsOfExperience(sub.experience || "");
         setHometown(sub.hometown || "");
         setEvaluators("Pre-filled");
-        // Add skills to notes
-        if (sub.skills) {
-          setNotes(`Skills: ${sub.skills}`);
+        if (sub.suggestedArchetype) {
+          setArchetype(sub.suggestedArchetype);
+        }
+        if (sub.suggestedScores) {
+          setScores({ ...sub.suggestedScores });
+        }
+        if (sub.personalitySummary) {
+          setNotes(sub.personalitySummary);
         }
       }
     }
@@ -156,6 +161,21 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               {submission.email || submission.phone || "Review and adjust the extracted info below"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-1 truncate">{submission.cvFileName}</p>
+            {(submission.suggestedArchetype || submission.suggestedScores) && (
+              <p className="text-xs text-primary/95 mt-2 leading-relaxed">
+                <span className="font-semibold">AI starting point (CV only): </span>
+                {[
+                  submission.suggestedArchetype
+                    ? ARCHETYPE_META[submission.suggestedArchetype].label
+                    : null,
+                  submission.suggestedScores
+                    ? `scores ~${calcTotalScore(submission.suggestedScores)}/10 avg — confirm after conversation`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
           </div>
           <ViewCvButton submissionId={submission.id} variant="outline" className="shrink-0" />
         </div>
@@ -262,6 +282,7 @@ export function CandidateForm({ initial }: CandidateFormProps) {
               highLabel={dim.highLabel}
               value={scores[dim.key]}
               onChange={(val) => setScore(dim.key, val)}
+              aiReason={submission?.suggestedScoreReasons?.[dim.key]}
             />
           ))}
         </div>
@@ -279,6 +300,19 @@ export function CandidateForm({ initial }: CandidateFormProps) {
             The scores tell you how good — the tag tells you who they are.
           </p>
         </div>
+
+        {/* AI Archetype Suggestion */}
+        {submission?.evaluationSuggestionNote ? (
+          <div className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2.5 space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary/90">
+              AI suggestion (from CV only)
+            </p>
+            <p className="text-sm leading-relaxed text-foreground/90">
+              {submission.evaluationSuggestionNote}
+            </p>
+          </div>
+        ) : null}
+
         <ArchetypePicker value={archetype} onChange={setArchetype} />
       </section>
 
